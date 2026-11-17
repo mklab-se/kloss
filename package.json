@@ -1,0 +1,53 @@
+{
+  "name": "@mklab-se/bun-templ",
+  "version": "0.1.0",
+  "description": "A template for building Bun command-line tools",
+  "keywords": [
+    "cli",
+    "bun",
+    "template",
+    "starter"
+  ],
+  "license": "MIT",
+  "author": "Kristofer Liljeblad <kristofer@mklab.se>",
+  "homepage": "https://github.com/mklab-se/bun-templ",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mklab-se/bun-templ.git"
+  },
+  "bugs": "https://github.com/mklab-se/bun-templ/issues",
+  "type": "module",
+  "bin": {
+    "bun-templ": "src/cli.ts"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "bun": ">=1.4"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "start": "bun src/cli.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome ci .",
+    "format": "biome check --write .",
+    "check": "bun run typecheck && bun run lint && bun test",
+    "build": "bun build src/cli.ts --compile --minify --sourcemap --outfile dist/bun-templ",
+    "sbom": "bun scripts/sbom.ts",
+    "rename": "bun scripts/rename.ts"
+  },
+  "dependencies": {
+    "commander": "^15.1.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.8",
+    "@types/bun": "^1.4.4",
+    "typescript": "^7.0.2"
+  }
+}
