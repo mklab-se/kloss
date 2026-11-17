@@ -441,7 +441,8 @@ return { fallMs, settleMs: Math.round(fallMs / 3) };
 
 - [ ] **Step 4: Verify in the browser:** empty model shows the hint; dropping removes it and updates
   the count; stopping the server turns the dot amber and restarting turns it green with the model
-  reloaded; `?` toggles help.
+  reloaded; `?` toggles help; the Auto-fit switch turns off on a pinch and back on when clicked or
+  on F; with it on, 20 drops spread over x 0..40 stay in view.
 
 - [ ] **Step 5: Run** `bun run check && bun run build && KLOSS_COMPILED_TEST=1 bun test test/server/compiled.test.ts`
   and the em-dash grep. **Commit** `"Overlay, help card and compiled-binary test"`
