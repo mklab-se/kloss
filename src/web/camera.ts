@@ -5,7 +5,7 @@
  *
  * Controllers sit behind CameraController so a walk mode can be added later.
  */
-import { Box3, Sphere, Spherical, Vector2, Vector3 } from "three";
+import { Box3, Plane, Raycaster, Sphere, Spherical, Vector2, Vector3 } from "three";
 import {
   breathOffset,
   breathWeight,
@@ -18,7 +18,7 @@ import type { KlossScene } from "./scene.ts";
 
 export interface CameraController {
   attach(el: HTMLElement): void;
-  /** Advances the camera; returns true when it moved (or is breathing). */
+  /** Advances the camera; returns true when the rendered camera changed. */
   update(dtMs: number): boolean;
   frame(box: Box3, instant?: boolean): void;
   home(): void;
@@ -27,6 +27,13 @@ export interface CameraController {
   onAutoFitChange(fn: (on: boolean) => void): void;
   /** Widens auto-fit to a point (a drop's landing spot) before the model itself grows. */
   include(point: Vector3): void;
+}
+
+export interface CadOptions {
+  /** Defaults to the system's prefers-reduced-motion setting. */
+  reducedMotion?: boolean;
+  /** Clock in milliseconds; defaults to performance.now. */
+  now?: () => number;
 }
 
 const MIN_DISTANCE = 2;
@@ -39,6 +46,12 @@ const ROTATE_PER_PIXEL = 0.006;
 /** A mouse wheel notch is about 100 units; this makes one notch about 28% zoom. */
 const MOUSE_ZOOM_SCALE = 0.25;
 const EASE_MS = 220;
+/** Breathing alone renders at about 30 frames a second. */
+const BREATH_FRAME_MS = 1000 / 30;
+/** Breathing fades out over this long when the user starts moving the camera. */
+const BREATH_FADE_MS = 300;
+/** Safari reports a pinch as gesture events; ignore them if wheel pinches are also arriving. */
+const PINCH_WHEEL_MS = 200;
 const PAN_KEYS = new Set([
   "KeyW",
   "KeyA",
@@ -52,6 +65,12 @@ const PAN_KEYS = new Set([
   "KeyE",
 ]);
 
+interface SafariGestureEvent extends UIEvent {
+  scale: number;
+  clientX: number;
+  clientY: number;
+}
+
 export class CadController implements CameraController {
   private el: HTMLElement | null = null;
   private readonly target = new Vector3();
@@ -63,17 +82,28 @@ export class CadController implements CameraController {
   private readonly pointers = new Map<number, Vector2>();
   private drag: { mode: "rotate" | "pan"; last: Vector2 } | null = null;
   private pinchStart: { dist: number; radius: number; mid: Vector2 } | null = null;
+  private gestureScale = 1;
+  private lastWheelPinch = Number.NEGATIVE_INFINITY;
   private readonly keys = new Set<string>();
   private lastInput = Number.NEGATIVE_INFINITY;
   private auto = true;
   private readonly listeners: ((on: boolean) => void)[] = [];
   private readonly reducedMotion: boolean;
+  private readonly now: () => number;
+  private breath = 0;
+  private nextBreathFrame = Number.NEGATIVE_INFINITY;
+  private lastBase = "";
   private lastRendered = "";
   private readonly cleanups: (() => void)[] = [];
 
-  constructor(private readonly view: KlossScene) {
+  constructor(
+    private readonly view: KlossScene,
+    opts: CadOptions = {},
+  ) {
     this.reducedMotion =
-      typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+      opts.reducedMotion ??
+      (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches);
+    this.now = opts.now ?? (() => performance.now());
   }
 
   get autoFit(): boolean {
@@ -103,9 +133,9 @@ export class CadController implements CameraController {
     this.extra.makeEmpty();
   }
 
-  /** Called by the user's own camera input: auto-fit stops, breathing pauses. */
-  private userInput(): void {
-    this.lastInput = performance.now();
+  /** The user moved the camera: auto-fit stops and breathing fades out. */
+  markInput(): void {
+    this.lastInput = this.now();
     if (this.auto) this.autoFit = false;
     this.goal = null;
   }
@@ -119,9 +149,10 @@ export class CadController implements CameraController {
   private goalFor(box: Box3): { target: Vector3; radius: number } {
     const sphere = box.getBoundingSphere(new Sphere());
     const cam = this.view.camera;
+    const radius = fitDistance(sphere.radius, cam.fov, cam.aspect);
     return {
       target: sphere.center.clone(),
-      radius: fitDistance(sphere.radius, cam.fov, cam.aspect),
+      radius: Math.min(MAX_DISTANCE, Math.max(MIN_DISTANCE, radius)),
     };
   }
 
@@ -144,7 +175,6 @@ export class CadController implements CameraController {
   home(): void {
     this.sph.theta = HOME_THETA;
     this.sph.phi = HOME_PHI;
-    this.lastInput = performance.now();
     this.autoFit = true;
     this.fitGoal();
   }
@@ -176,24 +206,35 @@ export class CadController implements CameraController {
     this.target.addScaledVector(right, -dx * ppp).addScaledVector(up, dy * ppp);
   }
 
-  /** Zooms to `radius`, keeping the point under the cursor in place. */
+  /**
+   * Zooms to `radius`, keeping the point under the cursor in place. The anchor is where the
+   * cursor's ray crosses the plane through the target facing the camera (as CAD tools do), not
+   * whatever the ray happens to hit, so zooming over the distant floor never lurches.
+   */
   private zoomTo(radius: number, clientX: number, clientY: number): void {
     const next = Math.min(MAX_DISTANCE, Math.max(MIN_DISTANCE, radius));
-    const p = this.view.pickPoint(this.ndc(clientX, clientY));
-    if (p && p.distanceTo(this.view.camera.position) < this.sph.radius * 20) {
-      this.target.lerp(p, 1 - next / this.sph.radius);
-    }
+    const cam = this.view.camera;
+    cam.updateMatrixWorld();
+    const ray = new Raycaster();
+    ray.setFromCamera(this.ndc(clientX, clientY), cam);
+    const plane = new Plane().setFromNormalAndCoplanarPoint(
+      cam.getWorldDirection(new Vector3()),
+      this.target,
+    );
+    const anchor = ray.ray.intersectPlane(plane, new Vector3());
+    if (anchor) this.target.lerp(anchor, 1 - next / this.sph.radius);
     this.sph.radius = next;
   }
 
   private onWheel = (e: WheelEvent): void => {
     e.preventDefault();
-    this.userInput();
-    const kind = this.wheel.classify(e, performance.now());
+    this.markInput();
+    const kind = this.wheel.classify(e, this.now());
     if (kind === "trackpad") {
       // A swipe moves the content with the fingers, like a map.
       this.panPixels(-e.deltaX, -e.deltaY);
     } else {
+      if (kind === "pinch") this.lastWheelPinch = this.now();
       const lines = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1;
       const delta = e.deltaY * lines * (kind === "mouse" ? MOUSE_ZOOM_SCALE : 1);
       this.zoomTo(
@@ -205,12 +246,34 @@ export class CadController implements CameraController {
     this.view.requestRender();
   };
 
+  /** Safari: a trackpad pinch arrives as gesture events with a running scale. */
+  private onGestureStart = (e: Event): void => {
+    e.preventDefault();
+    this.gestureScale = (e as SafariGestureEvent).scale || 1;
+  };
+
+  private onGestureChange = (e: Event): void => {
+    e.preventDefault();
+    const g = e as SafariGestureEvent;
+    const ratio = g.scale / (this.gestureScale || 1);
+    this.gestureScale = g.scale;
+    if (
+      this.now() - this.lastWheelPinch < PINCH_WHEEL_MS ||
+      !Number.isFinite(ratio) ||
+      ratio <= 0
+    ) {
+      return;
+    }
+    this.markInput();
+    this.zoomTo(this.sph.radius / ratio, g.clientX, g.clientY);
+    this.view.requestRender();
+  };
+
   private onPointerDown = (e: PointerEvent): void => {
     const el = this.el as HTMLElement;
     el.setPointerCapture(e.pointerId);
     el.focus();
     this.pointers.set(e.pointerId, new Vector2(e.clientX, e.clientY));
-    this.userInput();
     if (this.pointers.size === 2) {
       const [a, b] = [...this.pointers.values()] as [Vector2, Vector2];
       this.drag = null;
@@ -233,16 +296,19 @@ export class CadController implements CameraController {
       const [a, b] = [...this.pointers.values()] as [Vector2, Vector2];
       const mid = a.clone().add(b).multiplyScalar(0.5);
       const d = a.distanceTo(b);
+      this.markInput();
       this.panPixels(mid.x - this.pinchStart.mid.x, mid.y - this.pinchStart.mid.y);
       this.pinchStart.mid = mid;
       this.zoomTo((this.pinchStart.radius * this.pinchStart.dist) / Math.max(1, d), mid.x, mid.y);
-      this.lastInput = performance.now();
       this.view.requestRender();
       return;
     }
     if (!this.drag) return;
     const dx = e.clientX - this.drag.last.x;
     const dy = e.clientY - this.drag.last.y;
+    if (dx === 0 && dy === 0) return;
+    // Only an actual drag counts as camera input; a plain click leaves auto-fit alone.
+    this.markInput();
     this.drag.last.set(e.clientX, e.clientY);
     if (this.drag.mode === "rotate") {
       this.sph.theta -= dx * ROTATE_PER_PIXEL;
@@ -250,7 +316,6 @@ export class CadController implements CameraController {
     } else {
       this.panPixels(dx, dy);
     }
-    this.lastInput = performance.now();
     this.view.requestRender();
   };
 
@@ -263,14 +328,13 @@ export class CadController implements CameraController {
   private onDoubleClick = (e: MouseEvent): void => {
     const p = this.view.pickPoint(this.ndc(e.clientX, e.clientY));
     if (!p) return;
-    this.userInput();
+    this.markInput();
     this.goal = { target: p, radius: null };
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.code === "KeyF") {
-      this.lastInput = performance.now();
       this.autoFit = true;
       this.fitGoal();
       return;
@@ -282,7 +346,7 @@ export class CadController implements CameraController {
     if (PAN_KEYS.has(e.code)) {
       e.preventDefault();
       this.keys.add(e.code);
-      this.userInput();
+      this.markInput();
     }
   };
 
@@ -296,10 +360,10 @@ export class CadController implements CameraController {
 
   attach(el: HTMLElement): void {
     this.el = el;
-    const on = <K extends keyof HTMLElementEventMap>(
+    const on = (
       target: HTMLElement | Window,
-      type: K,
-      fn: (e: HTMLElementEventMap[K]) => void,
+      type: string,
+      fn: (e: never) => void,
       options?: AddEventListenerOptions,
     ) => {
       target.addEventListener(type, fn as EventListener, options);
@@ -311,16 +375,13 @@ export class CadController implements CameraController {
     on(el, "pointerup", this.onPointerUp);
     on(el, "pointercancel", this.onPointerUp);
     on(el, "dblclick", this.onDoubleClick);
-    on(el, "contextmenu", (e) => e.preventDefault());
+    on(el, "contextmenu", (e: Event) => e.preventDefault());
     on(window, "keydown", this.onKeyDown);
     on(window, "keyup", this.onKeyUp);
     on(window, "blur", this.onBlur);
-    // Safari's own pinch gesture would zoom the page; the wheel events already handle it.
-    for (const type of ["gesturestart", "gesturechange"]) {
-      const stop = (e: Event) => e.preventDefault();
-      window.addEventListener(type, stop);
-      this.cleanups.push(() => window.removeEventListener(type, stop));
-    }
+    on(window, "gesturestart", this.onGestureStart, { passive: false });
+    on(window, "gesturechange", this.onGestureChange, { passive: false });
+    on(window, "gestureend", (e: Event) => e.preventDefault(), { passive: false });
   }
 
   dispose(): void {
@@ -349,47 +410,69 @@ export class CadController implements CameraController {
     if (has("KeyQ")) move.y -= 1;
     if (move.lengthSq() === 0) return false;
     this.target.addScaledVector(move.normalize(), speed);
-    this.lastInput = performance.now();
+    this.lastInput = this.now();
     return true;
   }
 
+  private ease(dtMs: number): void {
+    if (this.auto && !this.goal) {
+      // Only start easing when the fit actually differs, so a fitted view goes idle.
+      const g = this.goalFor(this.fitBounds());
+      if (g.target.distanceTo(this.target) > 1e-3 || Math.abs(g.radius - this.sph.radius) > 1e-3) {
+        this.goal = g;
+      }
+    }
+    if (!this.goal) return;
+    const k = 1 - Math.exp(-dtMs / EASE_MS);
+    this.target.lerp(this.goal.target, k);
+    if (this.goal.radius !== null) this.sph.radius += (this.goal.radius - this.sph.radius) * k;
+    const done =
+      this.target.distanceTo(this.goal.target) < 1e-3 &&
+      (this.goal.radius === null || Math.abs(this.goal.radius - this.sph.radius) < 1e-3);
+    if (done) {
+      this.target.copy(this.goal.target);
+      if (this.goal.radius !== null) this.sph.radius = this.goal.radius;
+      this.goal = null;
+    }
+  }
+
   update(dtMs: number): boolean {
-    let moved = this.keyboard(dtMs);
-    if (this.auto && !this.goal) this.fitGoal();
-    if (this.goal) {
-      const k = 1 - Math.exp(-dtMs / EASE_MS);
-      this.target.lerp(this.goal.target, k);
-      if (this.goal.radius !== null) {
-        this.sph.radius += (this.goal.radius - this.sph.radius) * k;
-      }
-      const done =
-        this.target.distanceTo(this.goal.target) < 1e-3 &&
-        (this.goal.radius === null || Math.abs(this.goal.radius - this.sph.radius) < 1e-3);
-      if (done) {
-        this.target.copy(this.goal.target);
-        if (this.goal.radius !== null) this.sph.radius = this.goal.radius;
-        this.goal = null;
-      }
-      moved = true;
+    const now = this.now();
+    this.keyboard(dtMs);
+    this.ease(dtMs);
+
+    // Breathing fades in by breathWeight and fades out over BREATH_FADE_MS, never snapping.
+    const want = this.reducedMotion ? 0 : breathWeight(now - this.lastInput);
+    this.breath = want >= this.breath ? want : Math.max(want, this.breath - dtMs / BREATH_FADE_MS);
+
+    const base = `${this.target.toArray().join()}|${this.sph.radius}|${this.sph.theta}|${this.sph.phi}`;
+    const baseChanged = base !== this.lastBase;
+    this.lastBase = base;
+    if (!baseChanged) {
+      if (this.breath <= 0 && this.lastRendered !== "") return false;
+      // Breathing alone renders at about 30 frames a second.
+      if (now < this.nextBreathFrame) return false;
+      this.nextBreathFrame =
+        now - this.nextBreathFrame > 100
+          ? now + BREATH_FRAME_MS
+          : this.nextBreathFrame + BREATH_FRAME_MS;
     }
 
-    // Breathing: a tiny sway applied to the rendered camera only.
-    const weight = this.reducedMotion ? 0 : breathWeight(performance.now() - this.lastInput);
-    const b = breathOffset(performance.now());
+    const b = breathOffset(now);
     const rendered = new Spherical(
       this.sph.radius,
-      Math.min(MAX_PHI, Math.max(MIN_PHI, this.sph.phi + weight * b.pitch)),
-      this.sph.theta + weight * b.yaw,
+      Math.min(MAX_PHI, Math.max(MIN_PHI, this.sph.phi + this.breath * b.pitch)),
+      this.sph.theta + this.breath * b.yaw,
     );
     const cam = this.view.camera;
     cam.position.setFromSpherical(rendered).add(this.target);
     cam.lookAt(this.target);
     this.view.target.copy(this.target);
 
-    const key = `${cam.position.toArray().join()}`;
+    const key = cam.position.toArray().join();
     const changed = key !== this.lastRendered;
     this.lastRendered = key;
     if (changed) this.view.requestRender();
-    return moved || changed;
+    return changed;
   }
 }

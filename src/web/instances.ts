@@ -69,6 +69,9 @@ export class KlossInstances {
     mesh.setMatrixAt(mesh.count, klossMatrix(k, this.scratch));
     mesh.count += 1;
     mesh.instanceMatrix.needsUpdate = true;
+    // Three caches these for raycasting; a new instance must invalidate them.
+    mesh.boundingSphere = null;
+    mesh.boundingBox = null;
   }
 
   clear(): void {

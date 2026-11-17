@@ -59,6 +59,25 @@ function checkOrigin(req: Request): void {
   if (!ok) throw new HttpError(403, `changes from ${origin} are not allowed`);
 }
 
+const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
+const ANY_ADDRESS = new Set(["0.0.0.0", "::", "[::]"]);
+
+/**
+ * Refuses requests addressed to a host name that is not this machine. Without it, a web page
+ * could rebind its own name to 127.0.0.1 (DNS rebinding) and pass the Origin check. Serving on
+ * 0.0.0.0 opens kloss to the network on purpose, so any name is accepted there.
+ */
+function checkHost(req: Request, bound: string): void {
+  if (ANY_ADDRESS.has(bound)) return;
+  const header = req.headers.get("host") ?? "";
+  const name = header.startsWith("[")
+    ? header.slice(0, header.indexOf("]") + 1)
+    : header.split(":")[0];
+  if (!name || !(LOOPBACK.has(name) || name === bound)) {
+    throw new HttpError(403, `requests for host "${header}" are not allowed`);
+  }
+}
+
 function events(store: ModelStore): Response {
   let cleanup = () => {};
   const enc = new TextEncoder();
@@ -113,6 +132,14 @@ const notAllowed = () => Response.json({ error: "method not allowed" }, { status
 export function startServer(opts: ServerOptions): Server<undefined> {
   const { store } = opts;
   const model = () => ({ file: basename(store.path), klossar: store.klossar });
+  const guard = (req: Request, fn: () => Response | Promise<Response>) => {
+    try {
+      checkHost(req, opts.hostname);
+    } catch (e) {
+      return errorResponse(e);
+    }
+    return fn();
+  };
   return Bun.serve({
     port: opts.port,
     hostname: opts.hostname,
@@ -120,11 +147,12 @@ export function startServer(opts: ServerOptions): Server<undefined> {
     idleTimeout: 60,
     routes: {
       "/": index,
-      "/events": () => events(store),
+      "/events": (req) => guard(req, () => events(store)),
       "/healthz": () => new Response("ok"),
       "/api/klossar": {
         POST: async (req) => {
           try {
+            checkHost(req, opts.hostname);
             checkOrigin(req);
             const body = (await readBody(req)).trim();
             let kloss: ReturnType<typeof parseLine>;
@@ -151,9 +179,10 @@ export function startServer(opts: ServerOptions): Server<undefined> {
         PATCH: notAllowed,
       },
       "/api/model": {
-        GET: () => Response.json(model()),
+        GET: (req) => guard(req, () => Response.json(model())),
         PUT: async (req) => {
           try {
+            checkHost(req, opts.hostname);
             checkOrigin(req);
             await store.replace(await readBody(req));
             return Response.json(model());
@@ -166,10 +195,14 @@ export function startServer(opts: ServerOptions): Server<undefined> {
         PATCH: notAllowed,
       },
       "/api/model.kl": {
-        GET: async () =>
-          new Response(await store.text(), {
-            headers: { "content-type": "text/plain; charset=utf-8" },
-          }),
+        GET: (req) =>
+          guard(
+            req,
+            async () =>
+              new Response(await store.text(), {
+                headers: { "content-type": "text/plain; charset=utf-8" },
+              }),
+          ),
       },
     },
     fetch: () => Response.json({ error: "not found" }, { status: 404 }),

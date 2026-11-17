@@ -195,3 +195,21 @@ describe("live events", () => {
     });
   });
 });
+
+describe("host check", () => {
+  test("requests for another host name are refused (DNS rebinding)", async () => {
+    await serve("2x2 red 0,0\n");
+    const port = server.port;
+    const evil = { host: `evil.example:${port}`, origin: `http://evil.example:${port}` };
+    expect(
+      (await fetch(`${base}/api/model`, { method: "PUT", body: "", headers: evil })).status,
+    ).toBe(403);
+    expect((await fetch(`${base}/api/model.kl`, { headers: { host: evil.host } })).status).toBe(
+      403,
+    );
+    expect(await readFile(file, "utf8")).toBe("2x2 red 0,0\n");
+    expect(
+      (await fetch(`${base}/api/model.kl`, { headers: { host: `localhost:${port}` } })).status,
+    ).toBe(200);
+  });
+});

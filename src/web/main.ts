@@ -7,6 +7,7 @@ import { SIZES } from "../core/format.ts";
 import { KLOSS_HEIGHT, PLUPP_HEIGHT } from "../core/types.ts";
 import { CadController } from "./camera.ts";
 import { DropQueue } from "./drops.ts";
+import { guardedFrame } from "./frame.ts";
 import { createOverlay } from "./overlay.ts";
 import { KlossScene } from "./scene.ts";
 import { connect } from "./stream.ts";
@@ -68,7 +69,7 @@ connect({
 
 let last = performance.now();
 let shownCount = -1;
-function loop(now: number): void {
+function step(now: number): void {
   // The count follows what has landed, so it ticks up as klossar arrive.
   if (view.count !== shownCount) {
     shownCount = view.count;
@@ -79,9 +80,10 @@ function loop(now: number): void {
   const dropping = drops.update(now);
   const moving = camera.update(dt);
   if (dropping || moving || view.needsRender) view.render();
-  requestAnimationFrame(loop);
 }
-requestAnimationFrame(loop);
+requestAnimationFrame(
+  guardedFrame(step, requestAnimationFrame, (e) => console.error("kloss: frame failed", e)),
+);
 
 // For debugging in the browser console.
 Object.assign(window, { kloss: { view, camera, drops } });
