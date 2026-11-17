@@ -4,6 +4,7 @@
  */
 import {
   ACESFilmicToneMapping,
+  BackSide,
   Box3,
   CanvasTexture,
   Color,
@@ -24,6 +25,8 @@ import {
   RepeatWrapping,
   RingGeometry,
   Scene,
+  ShaderMaterial,
+  SphereGeometry,
   SRGBColorSpace,
   type Vector2,
   Vector3,
@@ -35,7 +38,43 @@ import { KLOSS_HEIGHT, PLUPP_HEIGHT, type PlacedKloss } from "../core/types.ts";
 import { KlossInstances } from "./instances.ts";
 import { buildFloorPluppGeometry } from "./kloss-geometry.ts";
 
-const BACKGROUND = "#dde8f0";
+/** The sky: deep blue overhead, pale at the horizon (also the fog's color, so the floor melts in). */
+const SKY_TOP = "#2f80dc";
+const HORIZON = "#c4e0f6";
+
+/** A sky dome around the camera: a gradient from the horizon up to the top of the sky. */
+function skyDome(): Mesh<SphereGeometry, ShaderMaterial> {
+  const material = new ShaderMaterial({
+    side: BackSide,
+    depthWrite: false,
+    fog: false,
+    // the sky keeps its colors: no tone mapping, which would wash the blue out
+    toneMapped: false,
+    uniforms: {
+      top: { value: new Color(SKY_TOP) },
+      horizon: { value: new Color(HORIZON) },
+    },
+    vertexShader: `
+      varying vec3 vDir;
+      void main() {
+        vDir = normalize(position);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: `
+      uniform vec3 top;
+      uniform vec3 horizon;
+      varying vec3 vDir;
+      void main() {
+        float h = clamp(vDir.y, 0.0, 1.0);
+        gl_FragColor = vec4(mix(horizon, top, pow(h, 0.3)), 1.0);
+        #include <colorspace_fragment>
+      }`,
+  });
+  const dome = new Mesh(new SphereGeometry(1, 32, 16), material);
+  dome.frustumCulled = false;
+  dome.renderOrder = -1;
+  return dome;
+}
 const FLOOR = "#5c9a55";
 const FLOOR_PLUPP = "#64a35d";
 /** Floor pluppar drawn in 3D within this many cells of the target; beyond, a texture shows them. */
@@ -90,6 +129,7 @@ export class KlossScene {
   private patch = { x: Number.NaN, z: Number.NaN, r: 0 };
   private floorSize = 0;
   private readonly raycaster = new Raycaster();
+  private readonly sky = skyDome();
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new WebGLRenderer({ canvas, antialias: true });
@@ -99,8 +139,9 @@ export class KlossScene {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = PCFSoftShadowMap;
 
-    this.scene.background = new Color(BACKGROUND);
-    this.scene.fog = new Fog(BACKGROUND, 60, 200);
+    this.scene.background = new Color(HORIZON);
+    this.scene.fog = new Fog(HORIZON, 60, 200);
+    this.scene.add(this.sky);
     const pmrem = new PMREMGenerator(this.renderer);
     this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
     this.scene.environmentIntensity = 0.35;
@@ -215,9 +256,12 @@ export class KlossScene {
 
   /** Keeps the floor, the floor pluppar, the fog and the sun around what the camera looks at. */
   private follow(): void {
+    // the sky dome stays centred on the camera, just inside its far plane
+    this.sky.position.copy(this.camera.position);
     const dist = this.camera.position.distanceTo(this.target);
     this.camera.near = Math.max(0.05, dist / 200);
     this.camera.far = Math.max(1000, dist * 40);
+    this.sky.scale.setScalar(this.camera.far * 0.9);
     this.camera.updateProjectionMatrix();
     const fog = this.scene.fog as Fog;
     // Fog only softens the horizon, far beyond the model.

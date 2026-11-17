@@ -16,6 +16,14 @@ export interface ScreenDirection {
 const FLOOR = new Plane(new Vector3(0, 1, 0), 0);
 const AXIS_X = new Vector3(1, 0, 0);
 const AXIS_Y = new Vector3(0, 0, 1);
+const AXIS_UP = new Vector3(0, 1, 0);
+
+export interface CompassArrows {
+  x: ScreenDirection;
+  y: ScreenDirection;
+  /** World up at the same spot, on the same scale (for lifting the dial above its shadow). */
+  up: ScreenDirection;
+}
 
 /**
  * Where kloss +X (world +x) and +Y (world +z) point on screen. With `at` (a screen position in
@@ -23,10 +31,7 @@ const AXIS_Y = new Vector3(0, 0, 1);
  * spot, so they line up with the plupp rows there despite perspective; otherwise (or when that
  * spot shows sky) they are the directions at the centre of the view.
  */
-export function compassArrows(
-  camera: Camera,
-  at?: Vector2,
-): { x: ScreenDirection; y: ScreenDirection } {
+export function compassArrows(camera: Camera, at?: Vector2): CompassArrows {
   camera.updateMatrixWorld();
   if (at) {
     const ray = new Raycaster();
@@ -42,12 +47,11 @@ export function compassArrows(
       };
       const x = along(AXIS_X);
       const y = along(AXIS_Y);
-      // the longer arrow has length 1; the other keeps its length relative to it
+      const up = along(AXIS_UP);
+      // the longer arrow has length 1; the other (and up) keep their lengths relative to it
       const scale = 1 / Math.max(1e-12, Math.hypot(x.dx, x.dy), Math.hypot(y.dx, y.dy));
-      return {
-        x: { dx: x.dx * scale, dy: x.dy * scale },
-        y: { dx: y.dx * scale, dy: y.dy * scale },
-      };
+      const scaled = (v: ScreenDirection) => ({ dx: v.dx * scale, dy: v.dy * scale });
+      return { x: scaled(x), y: scaled(y), up: scaled(up) };
     }
   }
   const toView = camera.matrixWorldInverse;
@@ -56,7 +60,30 @@ export function compassArrows(
     const v = axis.clone().transformDirection(toView);
     return { dx: v.x, dy: v.y };
   };
-  return { x: on(AXIS_X), y: on(AXIS_Y) };
+  return { x: on(AXIS_X), y: on(AXIS_Y), up: on(AXIS_UP) };
+}
+
+/**
+ * Where the horizon is, in normalised device coordinates (y; 1 is the top edge). Above 1 when the
+ * view looks down so steeply that the floor fills the whole screen.
+ */
+export function horizonNdcY(camera: Camera): number {
+  camera.updateMatrixWorld();
+  const forward = camera.getWorldDirection(new Vector3());
+  forward.y = 0;
+  if (forward.lengthSq() < 1e-12) return Number.POSITIVE_INFINITY;
+  const far = camera.position.clone().addScaledVector(forward.normalize(), 1e6);
+  far.y = 0;
+  return far.project(camera).y;
+}
+
+/**
+ * How far (in pixels) to slide the compass down so it lies on the floor: zero while the floor
+ * reaches its usual spot, otherwise just enough to sit below the horizon.
+ */
+export function compassShift(o: { centerY: number; horizonY: number; radius: number }): number {
+  const needed = o.horizonY + o.radius * 0.55 + 12;
+  return Math.max(0, needed - o.centerY);
 }
 
 /** An SVG matrix (without translation): dial units to screen pixels. */
@@ -65,6 +92,8 @@ export interface DialMatrix {
   b: number;
   c: number;
   d: number;
+  /** Pixels per arrow unit, to scale anything else measured like the arrows (such as up). */
+  k: number;
 }
 
 /**
@@ -131,7 +160,7 @@ export function dialMatrix(
     d += grow * uy * vy;
   }
   const k = radiusPx / Math.max(1e-9, widest);
-  return { a: a * k, b: b * k, c: c * k, d: d * k };
+  return { a: a * k, b: b * k, c: c * k, d: d * k, k };
 }
 
 const SVG = "http://www.w3.org/2000/svg";
@@ -140,6 +169,11 @@ const BOX = 200;
 const RADIUS_PX = 74;
 /** The dial is drawn in its own units: the rim is at 100. */
 const RIM = 100;
+/** How high the dial hovers above its shadow, in dial units (a block or two). */
+const HOVER = 14;
+/** The scene's sun shines from (-0.6, 1, 0.35): shadows fall towards +X and -Y. */
+const SHADOW_U = 0.6 * HOVER;
+const SHADOW_V = -0.35 * HOVER;
 
 function svg<K extends keyof SVGElementTagNameMap>(
   tag: K,
@@ -182,6 +216,12 @@ export function createCompass(root: HTMLElement, onClick: () => void): Compass {
   const box = svg("svg", { width: BOX, height: BOX, viewBox: `0 0 ${BOX} ${BOX}` });
 
   const defs = svg("defs", {}, box);
+  const blur = svg(
+    "filter",
+    { id: "compass-blur", x: "-50%", y: "-50%", width: "200%", height: "200%" },
+    defs,
+  );
+  svg("feGaussianBlur", { stdDeviation: 7 }, blur);
   const glass = svg(
     "radialGradient",
     { id: "compass-glass", cx: "40%", cy: "35%", r: "75%" },
@@ -191,7 +231,20 @@ export function createCompass(root: HTMLElement, onClick: () => void): Compass {
   svg("stop", { offset: "70%", "stop-color": "#ffffff", "stop-opacity": 0.38 }, glass);
   svg("stop", { offset: "100%", "stop-color": "#e8f0f4", "stop-opacity": 0.5 }, glass);
 
-  // Everything inside `dial` is drawn flat in the floor's plane: u along X, v along Y.
+  // The shadow lies on the floor; the dial hovers above it. Both are drawn flat in the floor's
+  // plane: u along X, v along Y.
+  const ground = svg("g", {}, box);
+  svg(
+    "circle",
+    {
+      cx: SHADOW_U,
+      cy: SHADOW_V,
+      r: RIM * 0.97,
+      class: "compass-shadow",
+      filter: "url(#compass-blur)",
+    },
+    ground,
+  );
   const dial = svg("g", { class: "compass-dial" }, box);
   svg("circle", { r: RIM, class: "compass-disc", fill: "url(#compass-glass)" }, dial);
   svg("circle", { r: RIM * 0.74, class: "compass-inner" }, dial);
@@ -253,21 +306,33 @@ export function createCompass(root: HTMLElement, onClick: () => void): Compass {
   let last = "";
   return {
     update(camera, canvas) {
-      // the compass's centre in normalised device coordinates of the canvas
       const c = canvas.getBoundingClientRect();
-      const b = button.getBoundingClientRect();
+      // keep the compass on the floor: below the horizon when the horizon is low
+      const centerX = button.offsetLeft + BOX / 2;
+      const baseCenterY = button.offsetTop + BOX / 2;
+      const horizonY = c.top + ((1 - horizonNdcY(camera)) / 2) * c.height;
+      const shift = compassShift({ centerY: baseCenterY, horizonY, radius: RADIUS_PX });
+      const centerY = baseCenterY + shift;
+      // the compass's centre in normalised device coordinates of the canvas
       const at = new Vector2(
-        ((b.left + b.width / 2 - c.left) / c.width) * 2 - 1,
-        -(((b.top + b.height / 2 - c.top) / c.height) * 2 - 1),
+        ((centerX - c.left) / c.width) * 2 - 1,
+        -(((centerY - c.top) / c.height) * 2 - 1),
       );
-      const m = dialMatrix(compassArrows(camera, at), RADIUS_PX);
+      const arrows = compassArrows(camera, at);
+      const m = dialMatrix(arrows, RADIUS_PX);
       const s = 1 / RIM;
-      const matrix = [m.a * s, m.b * s, m.c * s, m.d * s, BOX / 2, BOX / 2]
-        .map((v) => v.toFixed(4))
-        .join(" ");
-      if (matrix === last) return;
-      last = matrix;
-      dial.setAttribute("transform", `matrix(${matrix})`);
+      // the dial is lifted along the scene's up direction, by HOVER dial units
+      const liftX = arrows.up.dx * m.k * s * HOVER;
+      const liftY = -arrows.up.dy * m.k * s * HOVER;
+      const fmt = (v: number[]) => v.map((n) => n.toFixed(3)).join(" ");
+      const floor = fmt([m.a * s, m.b * s, m.c * s, m.d * s, BOX / 2, BOX / 2]);
+      const lifted = fmt([m.a * s, m.b * s, m.c * s, m.d * s, BOX / 2 + liftX, BOX / 2 + liftY]);
+      const key = `${shift.toFixed(1)}|${floor}|${lifted}`;
+      if (key === last) return;
+      last = key;
+      button.style.transform = shift > 0 ? `translateY(${shift.toFixed(1)}px)` : "";
+      ground.setAttribute("transform", `matrix(${floor})`);
+      dial.setAttribute("transform", `matrix(${lifted})`);
     },
   };
 }

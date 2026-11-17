@@ -1,5 +1,5 @@
 :root {
-  --bg: #dde8f0;
+  --bg: #c4e0f6;
   --ink: #1f2328;
   --muted: #5d6670;
   --panel: rgba(255, 255, 255, 0.78);
@@ -227,9 +227,9 @@ body {
   overflow: visible;
 }
 
-.compass-dial {
-  /* hovering a block or two above the ground: a close, fairly sharp shadow */
-  filter: drop-shadow(1px 3px 1.5px rgba(20, 45, 20, 0.38));
+.compass-shadow {
+  /* cast on the floor beneath the hovering dial */
+  fill: rgba(20, 45, 20, 0.34);
 }
 
 .compass-disc {

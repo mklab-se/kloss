@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { PerspectiveCamera, Plane, Raycaster, Vector2, Vector3 } from "three";
-import { compassArrows, dialMatrix } from "../../src/web/compass.ts";
+import { compassArrows, compassShift, dialMatrix, horizonNdcY } from "../../src/web/compass.ts";
 
 function cameraAt(x: number, y: number, z: number): PerspectiveCamera {
   const c = new PerspectiveCamera(45, 16 / 9, 0.1, 1000);
@@ -113,5 +113,25 @@ describe("dialMatrix (the compass lying on the floor)", () => {
     expect(m.b).toBeCloseTo(-50 * s, 6);
     const widest = Math.max(Math.hypot(m.a, m.b), Math.hypot(m.c, m.d));
     expect(widest).toBeCloseTo(50, 6);
+  });
+});
+
+describe("keeping the compass on the floor", () => {
+  test("horizonNdcY: low views put the horizon on screen, steep views above it", () => {
+    const low = horizonNdcY(cameraAt(0, 2, 30));
+    expect(low).toBeGreaterThan(0);
+    expect(low).toBeLessThan(0.3);
+    expect(horizonNdcY(cameraAt(0, 30, 3))).toBeGreaterThan(1);
+  });
+
+  test("compassShift: no shift while the floor reaches the corner", () => {
+    expect(compassShift({ centerY: 148, horizonY: -400, radius: 74 })).toBe(0);
+    expect(compassShift({ centerY: 148, horizonY: 60, radius: 74 })).toBe(0);
+  });
+
+  test("compassShift: slides down so the dial sits on the floor just below the horizon", () => {
+    const shift = compassShift({ centerY: 148, horizonY: 300, radius: 74 });
+    expect(148 + shift).toBeGreaterThan(300);
+    expect(148 + shift).toBeLessThan(300 + 74);
   });
 });

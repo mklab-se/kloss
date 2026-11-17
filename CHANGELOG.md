@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- A blue sky: deep blue overhead, fading to a pale blue at the horizon where the floor melts in.
+
 ### Fixed
 
 - The compass now lies on the floor in the top-left corner: a bigger, more detailed, slightly
   transparent dial (ticks, needles, a plupp at the centre) hovering just above the ground. It is
   drawn with the perspective of the floor behind it, so it lines up with the plupp rows there.
+  It casts a soft shadow on the floor, and slides down to stay on the floor when the horizon is
+  low.
 
 ## [0.2.0] - 2026-11-18
 
