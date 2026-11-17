@@ -38,7 +38,7 @@ import { buildPluppGeometry } from "./kloss-geometry.ts";
 const BACKGROUND = "#e8ecf1";
 const FLOOR = "#b9c0c8";
 /** Floor pluppar drawn in 3D within this many cells of the target; beyond, a texture shows them. */
-const FLOOR_PATCH = 18;
+const FLOOR_PATCH = 26;
 /** The sun's direction (from the target towards the sun). */
 const SUN_DIRECTION = new Vector3(-0.6, 1, 0.35).normalize();
 
@@ -239,7 +239,13 @@ export class KlossScene {
       let i = 0;
       for (let dx = -FLOOR_PATCH; dx <= FLOOR_PATCH; dx++) {
         for (let dz = -FLOOR_PATCH; dz <= FLOOR_PATCH; dz++) {
-          this.floorPluppar.setMatrixAt(i++, m.makeTranslation(cx + dx + 0.5, 0, cz + dz + 0.5));
+          // Pluppar flatten smoothly toward the patch's edge, where the floor texture takes over.
+          const r = Math.hypot(dx, dz) / FLOOR_PATCH;
+          const t = Math.min(1, Math.max(0, (1 - r) / 0.45));
+          const h = t * t * (3 - 2 * t);
+          if (h <= 0.02) continue;
+          m.makeScale(1, h, 1).setPosition(cx + dx + 0.5, 0, cz + dz + 0.5);
+          this.floorPluppar.setMatrixAt(i++, m);
         }
       }
       this.floorPluppar.count = i;
