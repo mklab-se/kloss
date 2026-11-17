@@ -67,6 +67,17 @@ export function buildPluppGeometry(): BufferGeometry {
   return g.toNonIndexed();
 }
 
+/** A cheaper plupp for the floor (no bevel), so thousands of them stay smooth. */
+export function buildFloorPluppGeometry(): BufferGeometry {
+  const shape = new Shape(plusPoints(0, 0, PLUPP_ARM_LENGTH / 2, PLUPP_ARM_WIDTH / 2));
+  const g = new ExtrudeGeometry(shape, {
+    depth: PLUPP_HEIGHT,
+    bevelEnabled: false,
+    curveSegments: 1,
+  });
+  return standUp(g).toNonIndexed();
+}
+
 function buildSlab(w: number, d: number): BufferGeometry {
   const shape = new Shape([
     new Vector2(INSET, -INSET),

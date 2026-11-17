@@ -3,6 +3,7 @@ import type { BufferGeometry } from "three";
 import { SIZES } from "../../src/core/format.ts";
 import type { Size } from "../../src/core/types.ts";
 import {
+  buildFloorPluppGeometry,
   buildKlossGeometry,
   buildPluppGeometry,
   klossGeometry,
@@ -86,5 +87,18 @@ describe("kloss", () => {
     const g = klossGeometry("4x2");
     expect(g.getAttribute("normal")).toBeDefined();
     for (const p of positions(g)) for (const v of p) expect(Number.isNaN(v)).toBe(false);
+  });
+});
+
+describe("floor plupp", () => {
+  test("same plus footprint and height as a kloss plupp, with far fewer vertices", () => {
+    const floor = buildFloorPluppGeometry();
+    const b = bounds(floor);
+    expect(b.min.x).toBeCloseTo(-0.3, 6);
+    expect(b.max.x).toBeCloseTo(0.3, 6);
+    expect(b.min.y).toBeCloseTo(0, 6);
+    expect(b.max.y).toBeCloseTo(0.4, 6);
+    const count = (g: BufferGeometry) => g.getAttribute("position").count;
+    expect(count(floor) * 3).toBeLessThan(count(buildPluppGeometry()));
   });
 });

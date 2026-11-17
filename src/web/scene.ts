@@ -33,13 +33,14 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 import { SIZES } from "../core/format.ts";
 import { KLOSS_HEIGHT, PLUPP_HEIGHT, type PlacedKloss } from "../core/types.ts";
 import { KlossInstances } from "./instances.ts";
-import { buildPluppGeometry } from "./kloss-geometry.ts";
+import { buildFloorPluppGeometry } from "./kloss-geometry.ts";
 
 const BACKGROUND = "#dde8f0";
 const FLOOR = "#5c9a55";
 const FLOOR_PLUPP = "#64a35d";
 /** Floor pluppar drawn in 3D within this many cells of the target; beyond, a texture shows them. */
-const FLOOR_PATCH = 26;
+const FLOOR_PATCH_MAX = 64;
+const FLOOR_PATCH_MIN = 20;
 /** The sun's direction (from the target towards the sun). */
 const SUN_DIRECTION = new Vector3(-0.6, 1, 0.35).normalize();
 
@@ -60,8 +61,9 @@ function floorTexture(): CanvasTexture {
     g.fillRect(c - a + dx, c - b + dy, 2 * a, 2 * b);
     g.fillRect(c - b + dx, c - a + dy, 2 * b, 2 * a);
   };
-  plus(size * 0.035, size * 0.035, "rgba(0,0,0,0.22)");
-  plus(-size * 0.015, -size * 0.015, "rgba(255,255,255,0.22)");
+  // shaded like the lit 3D pluppar, so the two meet without a visible line
+  plus(size * 0.045, size * 0.045, "rgba(0,0,0,0.32)");
+  plus(-size * 0.02, -size * 0.02, "rgba(255,255,255,0.28)");
   plus(0, 0, FLOOR_PLUPP);
   const t = new CanvasTexture(canvas);
   t.colorSpace = SRGBColorSpace;
@@ -85,7 +87,7 @@ export class KlossScene {
   private readonly bounds = new Box3();
   private klossCount = 0;
   private dirty = true;
-  private patchCenter = { x: Number.NaN, z: Number.NaN };
+  private patch = { x: Number.NaN, z: Number.NaN, r: 0 };
   private floorSize = 0;
   private readonly raycaster = new Raycaster();
 
@@ -122,9 +124,9 @@ export class KlossScene {
     this.floor.receiveShadow = true;
     this.scene.add(this.floor);
 
-    const side = 2 * FLOOR_PATCH + 1;
+    const side = 2 * FLOOR_PATCH_MAX + 1;
     this.floorPluppar = new InstancedMesh(
-      buildPluppGeometry().scale(1, 0.999, 1),
+      buildFloorPluppGeometry().scale(1, 0.999, 1),
       new MeshStandardMaterial({ color: FLOOR_PLUPP, roughness: 0.7 }),
       side * side,
     );
@@ -234,17 +236,24 @@ export class KlossScene {
       this.floorMap.offset.set(((cx - size / 2) % 1) + 0, ((-cz - size / 2) % 1) + 0);
     }
 
-    const showPatch = dist < 120;
+    const showPatch = dist < 160;
     this.floorPluppar.visible = showPatch;
-    if (showPatch && (cx !== this.patchCenter.x || cz !== this.patchCenter.z)) {
-      this.patchCenter = { x: cx, z: cz };
+    // The 3D patch grows with the view, in steps of 4 cells so it is not rebuilt every frame.
+    const patchR = Math.min(
+      FLOOR_PATCH_MAX,
+      Math.max(FLOOR_PATCH_MIN, Math.ceil((dist * 1.1) / 4) * 4),
+    );
+    const p = this.patch;
+    if (showPatch && (cx !== p.x || cz !== p.z || patchR !== p.r)) {
+      this.patch = { x: cx, z: cz, r: patchR };
       const m = new Matrix4();
       let i = 0;
-      for (let dx = -FLOOR_PATCH; dx <= FLOOR_PATCH; dx++) {
-        for (let dz = -FLOOR_PATCH; dz <= FLOOR_PATCH; dz++) {
-          // Pluppar flatten smoothly toward the patch's edge, where the floor texture takes over.
-          const r = Math.hypot(dx, dz) / FLOOR_PATCH;
-          const t = Math.min(1, Math.max(0, (1 - r) / 0.45));
+      for (let dx = -patchR; dx <= patchR; dx++) {
+        for (let dz = -patchR; dz <= patchR; dz++) {
+          // Pluppar flatten gradually over most of the patch, so the floor texture takes over
+          // without a visible edge.
+          const r = Math.hypot(dx, dz) / patchR;
+          const t = Math.min(1, Math.max(0, (1 - r) / 0.75));
           const h = t * t * (3 - 2 * t);
           if (h <= 0.02) continue;
           m.makeScale(1, h, 1).setPosition(cx + dx + 0.5, 0, cz + dz + 0.5);
