@@ -118,3 +118,94 @@ describe("pinch zoom", () => {
     expect(view.target.distanceTo(startTarget)).toBeLessThan(startRadius * 0.5);
   });
 });
+
+describe("keyboard and gestures (Fusion 360 and Cities: Skylines II conventions)", () => {
+  function controller() {
+    let now = 0;
+    const view = fakeView();
+    const c = new CadController(view, { reducedMotion: true, now: () => now });
+    c.frame(view.modelBounds(), true);
+    c.update(16);
+    const internals = c as unknown as {
+      el: unknown;
+      sph: { radius: number; theta: number; phi: number };
+      onKeyDown(e: unknown): void;
+      onKeyUp(e: unknown): void;
+      onWheel(e: unknown): void;
+    };
+    internals.el = {
+      getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 450 }),
+      clientHeight: 450,
+    };
+    const key = (code: string, key = "", extra: Record<string, unknown> = {}) => ({
+      code,
+      key,
+      metaKey: false,
+      ctrlKey: false,
+      altKey: false,
+      shiftKey: false,
+      preventDefault() {},
+      ...extra,
+    });
+    const hold = (code: string, keyName = "", ms = 500) => {
+      internals.onKeyDown(key(code, keyName));
+      for (let t = 0; t < ms; t += 16) {
+        now += 16;
+        c.update(16);
+      }
+      internals.onKeyUp(key(code, keyName));
+    };
+    return { c, view, internals, key, hold };
+  }
+
+  test("Q and E rotate around the model in opposite directions, without moving it", () => {
+    const { view, internals, hold } = controller();
+    const target = view.target.clone();
+    const theta = internals.sph.theta;
+    hold("KeyQ", "q");
+    const afterQ = internals.sph.theta;
+    expect(afterQ).not.toBeCloseTo(theta, 3);
+    hold("KeyE", "e");
+    hold("KeyE", "e");
+    expect(Math.sign(internals.sph.theta - afterQ)).toBe(-Math.sign(afterQ - theta));
+    expect(view.target.distanceTo(target)).toBeLessThan(1e-6);
+  });
+
+  test("+ zooms in and - zooms out, by the character typed (Swedish + sits on the Minus key)", () => {
+    const { internals, hold } = controller();
+    const r0 = internals.sph.radius;
+    hold("Minus", "+");
+    const r1 = internals.sph.radius;
+    expect(r1).toBeLessThan(r0 * 0.8);
+    hold("Slash", "-");
+    expect(internals.sph.radius).toBeGreaterThan(r1 * 1.25);
+  });
+
+  test("F6 fits the model and turns auto-fit back on, like F", () => {
+    const { c, internals, key } = controller();
+    c.markInput();
+    expect(c.autoFit).toBe(false);
+    let prevented = false;
+    internals.onKeyDown(key("F6", "F6", { preventDefault: () => (prevented = true) }));
+    expect(c.autoFit).toBe(true);
+    expect(prevented).toBe(true);
+  });
+
+  test("Shift + two-finger swipe rotates instead of panning", () => {
+    const { view, internals } = controller();
+    const target = view.target.clone();
+    const theta = internals.sph.theta;
+    internals.onWheel({
+      preventDefault() {},
+      deltaX: 30.5,
+      deltaY: 0,
+      deltaMode: 0,
+      ctrlKey: false,
+      shiftKey: true,
+      clientX: 400,
+      clientY: 225,
+    });
+    expect(internals.sph.theta).not.toBeCloseTo(theta, 3);
+    expect(view.target.distanceTo(target)).toBeLessThan(1e-6);
+  });
+});

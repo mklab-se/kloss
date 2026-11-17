@@ -236,8 +236,11 @@ Built first for a **Mac trackpad** (Kristofer's setup), with a mouse as a fallba
 | Click and drag (press the pad, or three-finger drag if enabled) | Rotates around the target point. The angle is limited so the camera never goes under the floor. |
 | Shift + click and drag | Pans, for those who prefer dragging. |
 | Double-click a kloss or the floor | Smoothly moves the target there, so rotation pivots around what you're looking at. |
-| WASD / arrow keys | Pan along the floor; **Q / E** move down and up. |
-| F / Home | Frame the whole model and turn auto-fit back on / return to the starting view. |
+| Shift + two-finger swipe | Rotates (as in Fusion 360). |
+| WASD / arrow keys | Pan along the floor (as in Cities: Skylines II). |
+| Q / E | Rotate left / right around the target (as in Cities: Skylines II). |
+| + / - | Zoom in / out, matched by the character typed so it works on Swedish keyboards. |
+| F or F6 / Home | Frame the whole model and turn auto-fit back on (F6 as in Fusion 360) / return to the starting view. |
 
 How this works in the browser, and what must hold:
 

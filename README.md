@@ -84,15 +84,18 @@ Built for a Mac trackpad:
 | Two-finger swipe | Pans left/right and up/down |
 | Pinch | Zooms toward the pointer |
 | Click and drag | Rotates around the model |
+| Shift + two-finger swipe | Rotates (as in Fusion 360) |
 | Shift + drag | Pans |
 | Double-click | Rotate around that point from now on |
-| WASD / arrows, Q/E | Move along the floor, down/up |
-| F | Fit the whole model and turn auto-fit back on |
+| WASD / arrows | Move along the floor (as in Cities: Skylines II) |
+| Q / E | Rotate left / right (as in Cities: Skylines II) |
+| + / - | Zoom in / out |
+| F or F6 | Fit the whole model and turn auto-fit back on (F6 as in Fusion 360) |
 | Home | Back to the starting view |
 | ? | Show the controls |
 
 The view keeps the whole model in sight (auto-fit) until you move the camera yourself. With a mouse,
-the wheel zooms and right-drag pans.
+the wheel (or + / -) zooms and right-drag pans.
 
 ### Coming later
 

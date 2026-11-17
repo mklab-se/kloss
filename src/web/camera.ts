@@ -52,7 +52,8 @@ const BREATH_FRAME_MS = 1000 / 30;
 const BREATH_FADE_MS = 300;
 /** Safari reports a pinch as gesture events; ignore them if wheel pinches are also arriving. */
 const PINCH_WHEEL_MS = 200;
-const PAN_KEYS = new Set([
+/** Keys held down to move: by position (W A S D, Q E) so they work on any layout. */
+const MOVE_KEYS = new Set([
   "KeyW",
   "KeyA",
   "KeyS",
@@ -64,6 +65,17 @@ const PAN_KEYS = new Set([
   "KeyQ",
   "KeyE",
 ]);
+/** + and - by the character typed: on a Swedish keyboard + sits where a US keyboard has -. */
+const ZOOM_KEYS: Record<string, "ZoomIn" | "ZoomOut"> = {
+  "+": "ZoomIn",
+  "=": "ZoomIn",
+  "-": "ZoomOut",
+  _: "ZoomOut",
+};
+/** Q/E rotate this fast (radians per second), as in Cities: Skylines II. */
+const KEY_ROTATE_SPEED = 1.6;
+/** +/- zoom by this factor per second. */
+const KEY_ZOOM_SPEED = 2.2;
 
 interface SafariGestureEvent extends UIEvent {
   scale: number;
@@ -206,6 +218,11 @@ export class CadController implements CameraController {
     this.target.addScaledVector(right, -dx * ppp).addScaledVector(up, dy * ppp);
   }
 
+  private rotatePixels(dx: number, dy: number): void {
+    this.sph.theta -= dx * ROTATE_PER_PIXEL;
+    this.sph.phi = Math.min(MAX_PHI, Math.max(MIN_PHI, this.sph.phi - dy * ROTATE_PER_PIXEL));
+  }
+
   /**
    * Zooms to `radius`, keeping the point under the cursor in place. The anchor is where the
    * cursor's ray crosses the plane through the target facing the camera (as CAD tools do), not
@@ -230,7 +247,10 @@ export class CadController implements CameraController {
     e.preventDefault();
     this.markInput();
     const kind = this.wheel.classify(e, this.now());
-    if (kind === "trackpad") {
+    if (kind === "trackpad" && e.shiftKey) {
+      // Shift + two-finger swipe rotates, as in Fusion 360.
+      this.rotatePixels(-e.deltaX, -e.deltaY);
+    } else if (kind === "trackpad") {
       // A swipe moves the content with the fingers, like a map.
       this.panPixels(-e.deltaX, -e.deltaY);
     } else {
@@ -311,8 +331,7 @@ export class CadController implements CameraController {
     this.markInput();
     this.drag.last.set(e.clientX, e.clientY);
     if (this.drag.mode === "rotate") {
-      this.sph.theta -= dx * ROTATE_PER_PIXEL;
-      this.sph.phi = Math.min(MAX_PHI, Math.max(MIN_PHI, this.sph.phi - dy * ROTATE_PER_PIXEL));
+      this.rotatePixels(dx, dy);
     } else {
       this.panPixels(dx, dy);
     }
@@ -334,16 +353,25 @@ export class CadController implements CameraController {
 
   private onKeyDown = (e: KeyboardEvent): void => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (e.code === "KeyF") {
+    if (e.code === "KeyF" || e.code === "F6") {
+      // F, or F6 as in Fusion 360
+      e.preventDefault();
       this.autoFit = true;
       this.fitGoal();
+      return;
+    }
+    const zoom = ZOOM_KEYS[e.key];
+    if (zoom) {
+      e.preventDefault();
+      this.keys.add(zoom);
+      this.markInput();
       return;
     }
     if (e.code === "Home") {
       this.home();
       return;
     }
-    if (PAN_KEYS.has(e.code)) {
+    if (MOVE_KEYS.has(e.code)) {
       e.preventDefault();
       this.keys.add(e.code);
       this.markInput();
@@ -352,6 +380,13 @@ export class CadController implements CameraController {
 
   private onKeyUp = (e: KeyboardEvent): void => {
     this.keys.delete(e.code);
+    const zoom = ZOOM_KEYS[e.key];
+    if (zoom) this.keys.delete(zoom);
+    // Releasing Shift turns a held "+" into "=": stop zooming when no zoom key is left.
+    if (e.key === "Shift") {
+      this.keys.delete("ZoomIn");
+      this.keys.delete("ZoomOut");
+    }
   };
 
   private onBlur = (): void => {
@@ -406,12 +441,23 @@ export class CadController implements CameraController {
     if (has("KeyS", "ArrowDown")) move.sub(forward);
     if (has("KeyD", "ArrowRight")) move.add(right);
     if (has("KeyA", "ArrowLeft")) move.sub(right);
-    if (has("KeyE")) move.y += 1;
-    if (has("KeyQ")) move.y -= 1;
-    if (move.lengthSq() === 0) return false;
-    this.target.addScaledVector(move.normalize(), speed);
-    this.lastInput = this.now();
-    return true;
+    const seconds = dtMs / 1000;
+    let changed = false;
+    // Q/E rotate around the model, as in Cities: Skylines II.
+    if (has("KeyQ")) this.sph.theta += KEY_ROTATE_SPEED * seconds;
+    if (has("KeyE")) this.sph.theta -= KEY_ROTATE_SPEED * seconds;
+    if (has("KeyQ", "KeyE")) changed = true;
+    if (has("ZoomIn") !== has("ZoomOut")) {
+      const factor = Math.exp(KEY_ZOOM_SPEED * seconds * (has("ZoomIn") ? -1 : 1));
+      this.sph.radius = Math.min(MAX_DISTANCE, Math.max(MIN_DISTANCE, this.sph.radius * factor));
+      changed = true;
+    }
+    if (move.lengthSq() > 0) {
+      this.target.addScaledVector(move.normalize(), speed);
+      changed = true;
+    }
+    if (changed) this.lastInput = this.now();
+    return changed;
   }
 
   private ease(dtMs: number): void {
