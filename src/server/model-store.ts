@@ -1,5 +1,5 @@
 /**
- * The model being served: kept in memory, persisted to its `.kloss` file. Every change goes
+ * The model being served: kept in memory, persisted to its `.kl` file. Every change goes
  * through one queue, so concurrent drops land (and are written) in the order they arrive.
  */
 import { appendFile, readFile, rename, writeFile } from "node:fs/promises";

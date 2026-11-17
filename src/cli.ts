@@ -43,13 +43,13 @@ export function buildProgram(): Command {
     // No command: the banner and how to start. `--help` still works.
     .action(() => {
       printBannerWithVersion();
-      console.log("Start building with: kloss serve model.kloss");
+      console.log("Start building with: kloss serve model.kl");
     });
 
   program
     .command("serve")
     .description("serve the live 3D view and the REST API for a kloss model")
-    .argument("[file]", "the model file (created if missing)", "model.kloss")
+    .argument("[file]", "the model file (created if missing)", "model.kl")
     .option("-p, --port <n>", "port to listen on", (v) => Number.parseInt(v, 10), 4321)
     .option(
       "--host <host>",

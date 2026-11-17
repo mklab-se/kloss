@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** `kloss serve model.kloss` serves a live 3D view of a kloss model and a REST API that drops
+**Goal:** `kloss serve model.kl` serves a live 3D view of a kloss model and a REST API that drops
 klossar into it, each one falling from the sky in every open browser.
 
 **Architecture:** Pure model logic (format, palette, landing) in `src/core/`, shared by server and
-browser. The server keeps the model in memory, persists it to the `.kloss` file through a serial
+browser. The server keeps the model in memory, persists it to the `.kl` file through a serial
 write queue, and pushes `model`/`drop` events over SSE. The browser is plain TypeScript + Three.js,
 bundled by Bun from an HTML import and embedded in the compiled binary.
 
@@ -27,7 +27,7 @@ argues from it).
   wide; drawn footprint about 0.98 of the cell.
 - World mapping (browser): kloss `x` -> three `x`, kloss `y` -> three `z`, `level` -> three
   `y = level * 1.2`. The kloss's corner (x, y) sits at the world origin of its geometry.
-- Server defaults: file `model.kloss`, port `4321`, host `127.0.0.1`. SSE ping every 15 s.
+- Server defaults: file `model.kl`, port `4321`, host `127.0.0.1`. SSE ping every 15 s.
 - Mutating requests with an `Origin` header that is not the server's own get `403`.
 - Runtime deps: `commander`, `three`. Dev: add `@types/three`. Latest versions only.
 - Run `bun run check && bun run build` before every commit that touches code.
@@ -203,7 +203,7 @@ Routes exactly as in the spec's REST API table. Follow lykta's `src/server/http.
     -> `201`
   - bad line -> `400` `{ error }` mentioning the bad token; bad JSON -> `400`
   - `GET /api/model` -> `{ file: "<basename of the model file>", klossar: [...] }`;
-    `GET /api/model.kloss` -> the file text, `text/plain`
+    `GET /api/model.kl` -> the file text, `text/plain`
   - `PUT /api/model` valid -> `200` with the new model; invalid -> `400` with `line`, model unchanged
   - body over `MAX_BODY_BYTES` -> `413`; drop at the kloss limit -> `413`
   - `POST` with `origin: https://evil.example` -> `403`; with the server's own origin -> `201`;
@@ -227,7 +227,7 @@ Routes exactly as in the spec's REST API table. Follow lykta's `src/server/http.
 ### Task 5: `kloss serve` command and docs
 
 **Files:**
-- Create: `src/commands/serve.ts`, `examples/castle.kloss` (a small model, 20 to 40 lines, using
+- Create: `src/commands/serve.ts`, `examples/castle.kl` (a small model, 20 to 40 lines, using
   all six sizes and several colors, with an overhang), `.claude/launch.json`
 - Modify: `src/cli.ts` (register `serve`), `README.md`, `CLAUDE.md`, `CHANGELOG.md`
 - Test: `test/cli.test.ts`
@@ -238,18 +238,18 @@ Routes exactly as in the spec's REST API table. Follow lykta's `src/server/http.
 
 - [ ] **Step 1: Write the failing tests** in `test/cli.test.ts`:
   - `kloss serve --help` lists `--port`, `--host`, `--open` and the `[file]` argument
-  - `kloss serve <tmp>/bad.kloss` with an invalid line 2 exits non-zero and stderr contains
+  - `kloss serve <tmp>/bad.kl` with an invalid line 2 exits non-zero and stderr contains
     `line 2:`
-  - spawn `kloss serve <tmp>/m.kloss --port <random>`; once stdout contains `http://127.0.0.1:<port>`
-    and a `curl` example, `POST` a kloss and see it in `<tmp>/m.kloss`; kill the process
+  - spawn `kloss serve <tmp>/m.kl --port <random>`; once stdout contains `http://127.0.0.1:<port>`
+    and a `curl` example, `POST` a kloss and see it in `<tmp>/m.kl`; kill the process
 
 - [ ] **Step 2: Run** `bun test test/cli.test.ts`. Expected: FAIL.
 
 - [ ] **Step 3: Implement** `runServe` and register
-  `serve [file]` (default `model.kloss`), `--port <n>` (default 4321), `--host <h>` (default
+  `serve [file]` (default `model.kl`), `--port <n>` (default 4321), `--host <h>` (default
   127.0.0.1), `--open` (macOS `open`, Linux `xdg-open`, Windows `start`). Print the URL and
   `curl -X POST http://<host>:<port>/api/klossar -d '2x4 blue 2,0'`. Format errors exit with code 2.
-  `.claude/launch.json`: configuration `kloss` running `bun --hot src/cli.ts serve examples/castle.kloss --port 4321`.
+  `.claude/launch.json`: configuration `kloss` running `bun --hot src/cli.ts serve examples/castle.kl --port 4321`.
 
 - [ ] **Step 4: Update docs.** README: what kloss does now, the format, the API with curl examples,
   the controls table from the spec; refresh the "What's new" callout for 0.1. CLAUDE.md: all six
@@ -441,7 +441,7 @@ return { fallMs, settleMs: Math.round(fallMs / 3) };
 
 - [ ] **Step 1: Write the failing compiled test** (copy lykta's `test/server/compiled.test.ts`
   pattern, gated on `KLOSS_COMPILED_TEST=1`): build the binary into a temp dir, run
-  `kloss serve m.kloss --port <random>` from that empty dir, and assert `GET /` returns HTML whose
+  `kloss serve m.kl --port <random>` from that empty dir, and assert `GET /` returns HTML whose
   referenced JS and CSS assets load with `200`, and `POST` then `GET /api/model` shows the kloss.
 
 - [ ] **Step 2: Run** `KLOSS_COMPILED_TEST=1 bun test test/server/compiled.test.ts`. Expected: PASS

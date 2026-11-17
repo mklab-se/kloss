@@ -6,5 +6,5 @@ dist/
 .env.*
 
 # Local model served by .claude/launch.json
-/scratch.kloss
-/model.kloss
+/scratch.kl
+/model.kl

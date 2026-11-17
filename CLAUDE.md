@@ -16,7 +16,7 @@ another kloss falls, tumbles and is removed (this comes with removal; with drop-
 kloss is always supported).
 
 Status: `kloss serve` serves a live 3D view (Three.js) and a REST API that drops klossar into a
-`.kloss` model file. Design: `docs/superpowers/specs/2026-11-17-kloss-viewer-design.md`; plan:
+`.kl` model file (`.kl` for kloss, and a nod to Kristofer Liljeblad and MKLab). Design: `docs/superpowers/specs/2026-11-17-kloss-viewer-design.md`; plan:
 `docs/superpowers/plans/2026-11-17-kloss-viewer.md`. Walk mode, removal and MCP come later. On npm the package is
 `@mklab-se/kloss` (bin `kloss`).
 
@@ -49,15 +49,15 @@ single-file release binaries.
   The no-command action prints the banner and how to start (`kloss serve`). `--help`/`-h` and `--version`/`-V` come from commander.
 - `src/commands/`: one module per command (`serve.ts`, `completion.ts`). Add new commands here.
 - `src/core/` (shared by server and browser; no DOM or server APIs): `types.ts` (data model and
-  dimensions), `format.ts` (the `.kloss` line format, sizes, palette), `landing.ts` (height map:
+  dimensions), `format.ts` (the `.kl` line format, sizes, palette), `landing.ts` (height map:
   a kloss lands on the highest thing under its footprint).
 - `src/server/`: `model-store.ts` (in-memory model persisted to the file through one write queue;
   emits `model`/`drop` events), `http.ts` (Bun.serve routes: `/` web app via HTML import, `/api/*`,
   `/events` SSE, `/healthz`; refuses changes from foreign `Origin`s).
 - `src/web/`: the browser app (Three.js), bundled by Bun from `index.html` and embedded in the
   compiled binary.
-- `examples/castle.kloss`: an example model. `.claude/launch.json` serves a git-ignored
-  `scratch.kloss` (`bun --hot src/cli.ts serve`).
+- `examples/castle.kl`: an example model. `.claude/launch.json` serves a git-ignored
+  `scratch.kl` (`bun --hot src/cli.ts serve`).
 - `src/meta.ts`: tool name, package name, version and description (version and description are
   read from `package.json`, the single source of truth).
 - `src/banner.ts`: block-letter banner rendered at runtime from the tool name via a built-in 5-row

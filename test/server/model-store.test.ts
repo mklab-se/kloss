@@ -11,7 +11,7 @@ let file = "";
 
 beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), "kloss-"));
-  file = join(dir, "m.kloss");
+  file = join(dir, "m.kl");
 });
 
 afterEach(async () => {

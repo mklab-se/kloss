@@ -67,7 +67,8 @@ Kristofer left the how to the builder's judgment and accepted A.
 
 ## The kloss model format
 
-A UTF-8 text file, conventionally `*.kloss`. It is read top to bottom, and each kloss line is one
+A UTF-8 text file with the extension `.kl` (for kloss, and a nod to Kristofer Liljeblad and
+MKLab). It is read top to bottom, and each kloss line is one
 drop in order.
 
 ```text
@@ -137,7 +138,7 @@ fully unit-tested.
 
 `kloss serve [file]`:
 
-- `file` defaults to `model.kloss` in the current directory and is created empty if missing. If it
+- `file` defaults to `model.kl` in the current directory and is created empty if missing. If it
   exists but has an invalid line, the server refuses to start and prints the error with its line
   number.
 - `--port` (default `4321`) and `--host` (default `127.0.0.1`, so only this machine can reach it;
@@ -156,7 +157,7 @@ comes from the format.
 | --- | --- | --- |
 | `POST /api/klossar` | JSON `{"size":"2x4","color":"blue","x":2,"y":0}`, or the plain-text line `2x4 blue 2,0` | `201` with the placed kloss: `{ index, size, color, x, y, level }`. Appends the line to the file. `400` for an invalid kloss. |
 | `GET /api/model` | | `{ klossar: [{ index, size, color, x, y, level }] }` |
-| `GET /api/model.kloss` | | The file text, `text/plain`. |
+| `GET /api/model.kl` | | The file text, `text/plain`. |
 | `PUT /api/model` | The whole model as `text/plain` | Validates everything first. If anything is invalid, `400` and nothing changes. Otherwise it replaces the file and returns the new model. |
 | `GET /events` | | Server-Sent Events (see below). |
 | `GET /healthz` | | `200 ok` |

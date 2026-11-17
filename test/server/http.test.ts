@@ -20,7 +20,7 @@ async function serve(initial = ""): Promise<void> {
 
 beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), "kloss-http-"));
-  file = join(dir, "castle.kloss");
+  file = join(dir, "castle.kl");
 });
 
 afterEach(async () => {
@@ -117,9 +117,9 @@ describe("REST API", () => {
       file: string;
       klossar: unknown[];
     };
-    expect(json.file).toBe("castle.kloss");
+    expect(json.file).toBe("castle.kl");
     expect(json.klossar).toEqual([{ index: 0, size: "2x2", color: "red", x: 0, y: 0, level: 0 }]);
-    const text = await fetch(`${base}/api/model.kloss`);
+    const text = await fetch(`${base}/api/model.kl`);
     expect(text.headers.get("content-type")).toContain("text/plain");
     expect(await text.text()).toBe("# c\n2x2 red 0,0\n");
   });

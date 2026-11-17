@@ -25,10 +25,10 @@ server, which also makes kloss a hands-on way to show both the power and the ris
 ## Quick start
 
 ```sh
-kloss serve castle.kloss --open
+kloss serve castle.kl --open
 ```
 
-This serves a live 3D view of `castle.kloss` at http://127.0.0.1:4321 (the file is created if it
+This serves a live 3D view of `castle.kl` at http://127.0.0.1:4321 (the file is created if it
 does not exist). Now drop klossar into it from another terminal and watch them fall from the sky:
 
 ```sh
@@ -38,11 +38,12 @@ curl -X POST localhost:4321/api/klossar -d '2x4 blue 2,0'
 ```
 
 The first two make a small tower; the 2x4 lands next to it, the start of a wall. Every drop is also
-appended to the model file. [`examples/castle.kloss`](examples/castle.kloss) is a bigger example.
+appended to the model file. [`examples/castle.kl`](examples/castle.kl) is a bigger example.
 
 ## The kloss model
 
-A model is a text file read from the top down. Each line drops one kloss from infinitely high, and
+A model is a `.kl` text file (for kloss, and a nod to Kristofer Liljeblad and MKLab), read from
+the top down. Each line drops one kloss from infinitely high, and
 it stops at the first thing it touches: the floor or another kloss. One plupp of overlap is enough
 to hold.
 
@@ -67,7 +68,7 @@ to hold.
 | --- | --- |
 | `POST /api/klossar` | Drops one kloss. Body: a line (`2x4 blue 2,0`) or JSON (`{"size":"2x4","color":"blue","x":2,"y":0}`). Returns where it landed (`level`). |
 | `GET /api/model` | The model as JSON: `{ file, klossar: [{ index, size, color, x, y, level }] }`. |
-| `GET /api/model.kloss` | The model file as text. |
+| `GET /api/model.kl` | The model file as text. |
 | `PUT /api/model` | Replaces the whole model with a text body; nothing changes if any line is invalid. |
 | `GET /events` | Live updates (Server-Sent Events): `model`, `drop`, `ping`. |
 
@@ -103,7 +104,7 @@ the wheel zooms and right-drag pans.
 
 ```sh
 bun install                    # install dependencies
-bun start serve --open         # serve model.kloss and open the 3D view
+bun start serve --open         # serve model.kl and open the 3D view
 bun start --help               # show the CLI help
 bun start version              # banner + version
 bun start completion zsh       # generate a zsh completion script

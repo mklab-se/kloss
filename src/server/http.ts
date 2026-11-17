@@ -165,7 +165,7 @@ export function startServer(opts: ServerOptions): Server<undefined> {
         DELETE: notAllowed,
         PATCH: notAllowed,
       },
-      "/api/model.kloss": {
+      "/api/model.kl": {
         GET: async () =>
           new Response(await store.text(), {
             headers: { "content-type": "text/plain; charset=utf-8" },

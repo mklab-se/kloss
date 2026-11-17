@@ -72,7 +72,7 @@ describe("serve", () => {
 
   test("an invalid model file stops with its line number", async () => {
     dir ||= await mkdtemp(join(tmpdir(), "kloss-cli-"));
-    const bad = join(dir, "bad.kloss");
+    const bad = join(dir, "bad.kl");
     await writeFile(bad, "2x2 red 0,0\n2x2 teal 0,0\n");
     const r = await run("serve", bad, "--port", "0");
     expect(r.code).toBe(2);
@@ -81,7 +81,7 @@ describe("serve", () => {
 
   test("serves the model and appends drops to the file", async () => {
     dir ||= await mkdtemp(join(tmpdir(), "kloss-cli-"));
-    const file = join(dir, "m.kloss");
+    const file = join(dir, "m.kl");
     const port = 19_000 + Math.floor(Math.random() * 1000);
     proc = Bun.spawn(["bun", "src/cli.ts", "serve", file, "--port", String(port)], {
       env,
