@@ -364,7 +364,11 @@ return { fallMs, settleMs: Math.round(fallMs / 3) };
   - `class WheelClassifier { classify(e: { deltaX: number; deltaY: number; deltaMode: number; ctrlKey: boolean }, nowMs: number): WheelKind }`
   - `panPerPixel(distance: number, fovDeg: number, viewportHeight: number): number`
   - `zoomDistance(distance: number, deltaY: number, min: number, max: number): number`
-  - `interface CameraController { attach(el: HTMLElement): void; update(dtMs: number): boolean; frame(box: Box3): void; home(): void; dispose(): void }`
+  - `fitDistance(radius: number, fovDeg: number, aspect: number): number` (distance at which a
+    sphere of `radius` fits the view with a 10% margin; uses the smaller of the vertical and
+    horizontal field of view; `radius` is raised to at least 6, the spec's 12 units across)
+  - `interface CameraController { attach(el: HTMLElement): void; update(dtMs: number): boolean; frame(box: Box3): void; home(): void; dispose(): void; autoFit: boolean; onAutoFitChange(fn: (on: boolean) => void): void; include(point: Vector3): void }`
+    (`include` widens the next auto-fit to a drop's landing spot)
   - `class CadController implements CameraController`
 
 - [ ] **Step 1: Write the failing tests:**
@@ -378,6 +382,9 @@ return { fallMs, settleMs: Math.round(fallMs / 3) };
   - `panPerPixel(10, 50, 1000)` equals `2 * 10 * Math.tan(25 deg) / 1000`
   - `zoomDistance(10, 100, 2, 2000)` is greater than 10; `zoomDistance(10, -100, 2, 2000)` less;
     clamps at 2 and 2000
+  - `fitDistance(1, 50, 16 / 9)` equals `fitDistance(6, 50, 16 / 9)` (minimum framing);
+    `fitDistance(20, 50, 16 / 9)` equals `1.1 * 20 / Math.sin(25 deg)`; a portrait aspect `0.5`
+    gives a larger distance than `16 / 9` for the same radius
 
 - [ ] **Step 2: Run** `bun test test/web/gestures.test.ts`. Expected: FAIL.
 
@@ -390,7 +397,12 @@ return { fallMs, settleMs: Math.round(fallMs / 3) };
   pans in screen space following the fingers, `mouse` zooms); pointer drag rotates (polar angle
   clamped to stay above the floor), Shift-drag or right-drag pans; double-click eases the target to
   `pickPoint`; WASD/arrows pan along the floor, Q/E down/up; F frames `modelBounds()`, Home resets.
-  No extra inertia. Touch: one finger rotates, two pan and pinch. Add
+  No extra inertia. Touch: one finger rotates, two pan and pinch.
+  **Auto-fit** (spec "Auto-fit"): `autoFit` starts `true`; while on, each `update` eases the target
+  to the center of `modelBounds()` widened by any `include`d points and the distance to
+  `fitDistance` of its bounding sphere, keeping the current angles. Every user camera input sets it
+  `false` (firing `onAutoFitChange`); F calls `frame(modelBounds())` and sets it `true`.
+  `main.ts` calls `include(landing point)` when a drop is queued. Add
   `html, body { overscroll-behavior: none; touch-action: none; }` to `styles.css`. Zoom limits: 2 to
   2000.
 
@@ -411,7 +423,9 @@ return { fallMs, settleMs: Math.round(fallMs / 3) };
 
 **Interfaces:**
 - Consumes: `connect` status (Task 7), `ModelStore`/server (Tasks 3 to 5)
-- Produces: `createOverlay(root: HTMLElement): { setFile(name: string): void; setCount(n: number): void; setStatus(s: "live" | "reconnecting"): void; toggleHelp(): void }`
+- Produces: `createOverlay(root: HTMLElement): { setFile(name: string): void; setCount(n: number): void; setStatus(s: "live" | "reconnecting"): void; setAutoFit(on: boolean): void; onAutoFitClick(fn: () => void): void; toggleHelp(): void }`
+  (the Auto-fit switch reflects `CadController.autoFit` via `onAutoFitChange`; clicking it toggles
+  `autoFit`, and turning it on frames immediately)
 
 - [ ] **Step 1: Write the failing compiled test** (copy lykta's `test/server/compiled.test.ts`
   pattern, gated on `KLOSS_COMPILED_TEST=1`): build the binary into a temp dir, run

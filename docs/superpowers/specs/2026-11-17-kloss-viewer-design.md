@@ -235,7 +235,7 @@ Built first for a **Mac trackpad** (Kristofer's setup), with a mouse as a fallba
 | Shift + click and drag | Pans, for those who prefer dragging. |
 | Double-click a kloss or the floor | Smoothly moves the target there, so rotation pivots around what you're looking at. |
 | WASD / arrow keys | Pan along the floor; **Q / E** move down and up. |
-| F / Home | Frame the whole model / return to the starting view. |
+| F / Home | Frame the whole model and turn auto-fit back on / return to the starting view. |
 
 How this works in the browser, and what must hold:
 
@@ -251,6 +251,18 @@ How this works in the browser, and what must hold:
   sideways movement) zooms instead of panning, and right-drag pans. The detection heuristic is the
   builder's call; the trackpad must never be misread as a mouse.
 - Touch screens (iPad): one finger rotates, two fingers pan and pinch.
+
+#### Auto-fit (added 2026-11-17)
+
+- **On by default.** The camera keeps the whole model in view at the current viewing angle, easing
+  smoothly as the model changes. When a drop arrives, the framing includes its landing spot right
+  away, so the kloss lands in view.
+- It frames at least about 12 units across, so a model of one kloss is not blown up to fill the
+  screen. An empty model shows the area around the origin.
+- **Any camera input from the user** (zoom, pan, rotate, keyboard movement, double-click) turns
+  auto-fit **off**; the camera then stays where the user puts it.
+- **F** frames the whole model and turns auto-fit back **on**. The overlay shows an "Auto-fit"
+  switch that shows the state and toggles it when clicked.
 
 The camera controller lives behind a small interface (`attach`, `update(dt)`, `dispose`) so walk mode
 can be added later as a second controller without touching the scene.
