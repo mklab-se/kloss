@@ -18,7 +18,7 @@ argues from it).
 
 ## Global Constraints
 
-- No em-dashes (U+2014) anywhere, including test strings and comments.
+- Avoid em-dashes (U+2014) in what you write; there is no check for it, and it never blocks work.
 - Our vocabulary only: kloss/klossar, plupp/pluppar, socket, floor. Never "Lego", "brick" in UI copy,
   round studs, or Lego's color table.
 - Sizes: `1x1`, `1x2`, `2x1`, `2x2`, `2x4`, `4x2` (`<w>x<d>`: w along x, d along y).
@@ -456,5 +456,4 @@ return { fallMs, settleMs: Math.round(fallMs / 3) };
   reloaded; `?` toggles help; the Auto-fit switch turns off on a pinch and back on when clicked or
   on F; with it on, 20 drops spread over x 0..40 stay in view.
 
-- [ ] **Step 5: Run** `bun run check && bun run build && KLOSS_COMPILED_TEST=1 bun test test/server/compiled.test.ts`
-  and the em-dash grep. **Commit** `"Overlay, help card and compiled-binary test"`
+- [ ] **Step 5: Run** `bun run check && bun run build && KLOSS_COMPILED_TEST=1 bun test test/server/compiled.test.ts`. **Commit** `"Overlay, help card and compiled-binary test"`

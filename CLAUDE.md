@@ -91,8 +91,8 @@ single-file release binaries.
 - **No em-dashes (U+2014), anywhere:** docs, CHANGELOG, code comments, help text, error messages,
   test strings, commit messages and PR descriptions. Use a comma where it works; otherwise a colon,
   parentheses, or a new sentence. If code genuinely needs the character at runtime, write the
-  escape `\u2014`. CI enforces this; check locally with
-  `grep -rn --exclude-dir=node_modules --exclude-dir=.git $'\xe2\x80\x94' .`
+  escape `\u2014`. This is a writing habit, not a gate: there is deliberately no CI or release
+  check for it (Kristofer prefers that a stray em-dash never blocks a build).
 
 ## Dependency Policy
 

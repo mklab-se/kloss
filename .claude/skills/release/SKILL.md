@@ -31,7 +31,6 @@ $ARGUMENTS must be one of: `major`, `minor`, `patch`. If empty or invalid, stop 
 
 - `bun run format`, then `bun run check` (typecheck + lint + test): abort on any failure
 - `bun run build && ./dist/kloss --version`: the compiled binary must run
-- `grep -rn --exclude-dir=node_modules --exclude-dir=.git $'\xe2\x80\x94' .` must print nothing
 - `git status`: abort if there are uncommitted changes that are NOT docs, version, or dependency files
 
 ### 4. Bump the version
