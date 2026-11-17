@@ -11,8 +11,8 @@
 <!-- "What's new" callout: keep it right after the badges and refresh it on every minor/major
      release (version and a one-line summary of the headline changes). Only link CHANGELOG.md. -->
 <p align="center">
-  <strong>kloss 0.1</strong> is here: drop klossar through a REST API and watch them fall into a live
-  3D model in your browser.<br>
+  <strong>kloss 0.2</strong> is here: a shorter model format (<code>5,1|2x4|blue</code>, with
+  carry-over and <code>.</code> repeats), a compass in the viewer, and a much bigger castle.<br>
   <a href="CHANGELOG.md"><strong>What's new</strong></a>
 </p>
 
