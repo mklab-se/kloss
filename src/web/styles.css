@@ -220,7 +220,7 @@ body {
 }
 
 .compass-arrow {
-  stroke-width: 3;
+  stroke-width: 2.6;
   stroke-linecap: round;
 }
 
@@ -228,15 +228,19 @@ body {
   fill: var(--ink);
 }
 
-.compass-arrow.axis-x,
-.compass-head.axis-x {
+.compass-arrow.axis-x {
   stroke: #d12a1f;
+}
+
+.compass-head.axis-x {
   fill: #d12a1f;
 }
 
-.compass-arrow.axis-y,
-.compass-head.axis-y {
+.compass-arrow.axis-y {
   stroke: #2f8a4c;
+}
+
+.compass-head.axis-y {
   fill: #2f8a4c;
 }
 

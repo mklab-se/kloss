@@ -84,7 +84,7 @@ function step(now: number): void {
   const moving = camera.update(dt);
   if (dropping || moving || view.needsRender) {
     view.render();
-    compass.update(view.camera);
+    compass.update(view.camera, view.renderer.domElement);
   }
 }
 requestAnimationFrame(
