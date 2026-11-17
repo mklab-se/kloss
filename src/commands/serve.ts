@@ -44,7 +44,7 @@ export async function runServe(opts: ServeOptions): Promise<Server<undefined>> {
   const url = `http://${shownHost}:${server.port}`;
   console.log(`kloss is serving ${opts.file} (${store.klossar.length} klossar) at ${url}`);
   console.log(dim("Drop a kloss:"));
-  console.log(`  curl -X POST ${url}/api/klossar -d '2x4 blue 2,0'`);
+  console.log(`  curl -X POST ${url}/api/klossar -d '2,0|2x4|blue'`);
   if (opts.open) openBrowser(url);
   return server;
 }

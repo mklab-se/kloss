@@ -6,27 +6,27 @@ const levels = (model: string) => placeAll(parseModel(model)).map((k) => k.level
 
 describe("landing", () => {
   test("three 2x2 on the same spot make a tower", () => {
-    expect(levels("2x2 red 0,0\n2x2 red 0,0\n2x2 red 0,0")).toEqual([0, 1, 2]);
+    expect(levels("0,0|2x2|red\n0,0|2x2|red\n0,0|2x2|red")).toEqual([0, 1, 2]);
   });
 
   test("a 2x4 beside the tower lands on the floor (the spec's wall)", () => {
-    expect(levels("2x2 red 0,0\n2x2 red 0,0\n2x2 red 0,0\n2x4 blue 2,0")).toEqual([0, 1, 2, 0]);
+    expect(levels("0,0|2x2|red\n0,0|2x2|red\n0,0|2x2|red\n2,0|2x4|blue")).toEqual([0, 1, 2, 0]);
   });
 
   test("one plupp of overlap holds, and overhangs carry klossar", () => {
-    expect(levels("1x1 red 0,0\n2x4 blue 0,0\n1x1 red 1,3\n1x1 red 1,4")).toEqual([0, 1, 2, 0]);
+    expect(levels("0,0|1x1|red\n0,0|2x4|blue\n1,3|1x1|red\n1,4|1x1|red")).toEqual([0, 1, 2, 0]);
   });
 
   test("negative coordinates", () => {
-    expect(levels("2x2 red -1,-1\n1x1 blue 0,0")).toEqual([0, 1]);
+    expect(levels("-1,-1|2x2|red\n0,0|1x1|blue")).toEqual([0, 1]);
   });
 
   test("4x2 and 2x4 cover different cells", () => {
-    expect(levels("4x2 red 0,0\n1x1 blue 3,0\n1x1 blue 0,3")).toEqual([0, 1, 0]);
+    expect(levels("0,0|4x2|red\n3,0|1x1|blue\n0,3|1x1|blue")).toEqual([0, 1, 0]);
   });
 
   test("placeAll numbers klossar in order", () => {
-    const placed = placeAll(parseModel("1x1 red 0,0\n1x1 red 5,5"));
+    const placed = placeAll(parseModel("0,0|1x1|red\n5,5|1x1|red"));
     expect(placed.map((k) => k.index)).toEqual([0, 1]);
     expect(placed[1]).toEqual({ index: 1, size: "1x1", color: "red", x: 5, y: 5, level: 0 });
   });

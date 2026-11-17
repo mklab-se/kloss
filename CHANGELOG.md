@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **New `.kl` format:** `x,y|size|color`. A left-out size or color is the last one used, and a line
+  with just `.` repeats the drop before it. Whitespace is allowed around separators, and kloss
+  writes models compactly with right-aligned coordinates. The 0.1 format (`2x4 blue 2,0`) is
+  gone; kloss says how to rewrite such a line.
+- `POST /api/klossar` accepts the short forms too: `-d '5,1'` and `-d '.'` reuse the last
+  kloss's size and color.
+- `examples/castle.kl` is written in the new format (and about 30% smaller).
+
 ## [0.1.0] - 2026-11-17
 
 ### Added

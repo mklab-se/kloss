@@ -4,7 +4,7 @@
  */
 import { basename } from "node:path";
 import type { Server } from "bun";
-import { FormatError, parseKlossJson, parseLine } from "../core/format.ts";
+import { FormatError, parseKlossJson } from "../core/format.ts";
 import { MAX_BODY_BYTES } from "../core/types.ts";
 import index from "../web/index.html";
 import { LimitError, type ModelEvent, type ModelStore } from "./model-store.ts";
@@ -155,20 +155,17 @@ export function startServer(opts: ServerOptions): Server<undefined> {
             checkHost(req, opts.hostname);
             checkOrigin(req);
             const body = (await readBody(req)).trim();
-            let kloss: ReturnType<typeof parseLine>;
-            if (body.startsWith("{")) {
-              let json: unknown;
-              try {
-                json = JSON.parse(body);
-              } catch {
-                throw new FormatError("the body is not valid JSON");
-              }
-              kloss = parseKlossJson(json);
-            } else {
-              kloss = parseLine(body);
-              if (!kloss) throw new FormatError('expected a kloss line like "2x4 blue 2,0"');
+            if (!body.startsWith("{")) {
+              // A text line may leave out size and color, or be "." to repeat the last drop.
+              return Response.json(await store.dropLine(body), { status: 201 });
             }
-            return Response.json(await store.drop(kloss), { status: 201 });
+            let json: unknown;
+            try {
+              json = JSON.parse(body);
+            } catch {
+              throw new FormatError("the body is not valid JSON");
+            }
+            return Response.json(await store.drop(parseKlossJson(json)), { status: 201 });
           } catch (e) {
             return errorResponse(e);
           }

@@ -83,24 +83,39 @@ describe("REST API", () => {
   });
 
   test("POST a text line lands on top of what is there", async () => {
-    await serve("2x2 red 0,0\n");
-    const res = await post("2x2 red 0,0", { "content-type": "text/plain" });
+    await serve("0,0|2x2|red\n");
+    const res = await post("0,0|2x2|red", { "content-type": "text/plain" });
     expect(res.status).toBe(201);
     expect(((await res.json()) as { level: number }).level).toBe(1);
-    expect(await readFile(file, "utf8")).toBe("2x2 red 0,0\n2x2 red 0,0\n");
+    expect(await readFile(file, "utf8")).toBe("0,0|2x2|red\n.\n");
   });
 
   test("curl -d (form encoded) is read as a text line", async () => {
     await serve();
-    const res = await post("2x4 blue 2,0", {
+    const res = await post("2,0|2x4|blue", {
       "content-type": "application/x-www-form-urlencoded",
     });
     expect(res.status).toBe(201);
   });
 
+  test("a text POST can leave out size and color, or repeat the last drop with a dot", async () => {
+    await serve("1,1|4x2|gray\n");
+    const short = await post("5,1|2x2");
+    expect(short.status).toBe(201);
+    expect(await short.json()).toMatchObject({ x: 5, y: 1, size: "2x2", color: "gray" });
+    const again = await post(".");
+    expect(await again.json()).toMatchObject({ x: 5, y: 1, size: "2x2", color: "gray", level: 1 });
+    expect(await readFile(file, "utf8")).toBe("1,1|4x2|gray\n  5,  1 | 2x2\n.\n");
+  });
+
+  test("a dot with nothing to repeat is a 400", async () => {
+    await serve();
+    expect((await post(".")).status).toBe(400);
+  });
+
   test("a bad line is a 400 naming the problem", async () => {
     await serve();
-    const res = await post("2x2 teal 0,0");
+    const res = await post("0,0|2x2|teal");
     expect(res.status).toBe(400);
     expect(((await res.json()) as { error: string }).error).toContain('"teal"');
   });
@@ -112,7 +127,7 @@ describe("REST API", () => {
   });
 
   test("GET the model as JSON and as text", async () => {
-    await serve("# c\n2x2 red 0,0\n");
+    await serve("# c\n0,0|2x2|red\n");
     const json = (await (await fetch(`${base}/api/model`)).json()) as {
       file: string;
       klossar: unknown[];
@@ -121,23 +136,23 @@ describe("REST API", () => {
     expect(json.klossar).toEqual([{ index: 0, size: "2x2", color: "red", x: 0, y: 0, level: 0 }]);
     const text = await fetch(`${base}/api/model.kl`);
     expect(text.headers.get("content-type")).toContain("text/plain");
-    expect(await text.text()).toBe("# c\n2x2 red 0,0\n");
+    expect(await text.text()).toBe("# c\n0,0|2x2|red\n");
   });
 
   test("PUT replaces the model, or nothing on error", async () => {
-    await serve("2x2 red 0,0\n");
+    await serve("0,0|2x2|red\n");
     const ok = await fetch(`${base}/api/model`, {
       method: "PUT",
-      body: "1x1 blue 0,0\n1x1 blue 0,0\n",
+      body: "0,0|1x1|blue\n.\n",
     });
     expect(ok.status).toBe(200);
     const model = (await ok.json()) as { klossar: { level: number }[] };
     expect(model.klossar.map((k) => k.level)).toEqual([0, 1]);
 
-    const bad = await fetch(`${base}/api/model`, { method: "PUT", body: "1x1 blue 0,0\nnope\n" });
+    const bad = await fetch(`${base}/api/model`, { method: "PUT", body: "0,0|1x1|blue\nnope\n" });
     expect(bad.status).toBe(400);
     expect(((await bad.json()) as { line: number }).line).toBe(2);
-    expect(await readFile(file, "utf8")).toBe("1x1 blue 0,0\n1x1 blue 0,0\n");
+    expect(await readFile(file, "utf8")).toBe("0,0|1x1|blue\n.\n");
   });
 
   test("bodies over 1 MB are a 413", async () => {
@@ -147,13 +162,15 @@ describe("REST API", () => {
   });
 
   test("dropping past the kloss limit is a 413", async () => {
-    await serve(`${Array.from({ length: 10_000 }, () => "1x1 red 0,0").join("\n")}\n`);
-    expect((await post("1x1 red 0,0")).status).toBe(413);
+    await serve(
+      `${Array.from({ length: 10_000 }, (_, i) => (i === 0 ? "0,0|1x1|red" : ".")).join("\n")}\n`,
+    );
+    expect((await post("0,0|1x1|red")).status).toBe(413);
   });
 
   test("changes from another web page are refused, our own page and curl are not", async () => {
     await serve();
-    expect((await post("1x1 red 0,0", { origin: "https://evil.example" })).status).toBe(403);
+    expect((await post("0,0|1x1|red", { origin: "https://evil.example" })).status).toBe(403);
     expect(
       (
         await fetch(`${base}/api/model`, {
@@ -163,8 +180,8 @@ describe("REST API", () => {
         })
       ).status,
     ).toBe(403);
-    expect((await post("1x1 red 0,0", { origin: base })).status).toBe(201);
-    expect((await post("1x1 red 0,0")).status).toBe(201);
+    expect((await post("0,0|1x1|red", { origin: base })).status).toBe(201);
+    expect((await post("0,0|1x1|red")).status).toBe(201);
   });
 
   test("health, the web app and wrong methods", async () => {
@@ -181,10 +198,10 @@ describe("REST API", () => {
 
 describe("live events", () => {
   test("model on connect, then drop after a POST", async () => {
-    await serve("2x2 red 0,0\n");
+    await serve("0,0|2x2|red\n");
     const res = await fetch(`${base}/events`);
     expect(res.headers.get("content-type")).toContain("text/event-stream");
-    const events = await readEvents(res, 2, () => post("2x2 red 0,0"));
+    const events = await readEvents(res, 2, () => post("0,0|2x2|red"));
     expect(events[0]).toEqual({
       event: "model",
       data: { klossar: [{ index: 0, size: "2x2", color: "red", x: 0, y: 0, level: 0 }] },
@@ -198,7 +215,7 @@ describe("live events", () => {
 
 describe("host check", () => {
   test("requests for another host name are refused (DNS rebinding)", async () => {
-    await serve("2x2 red 0,0\n");
+    await serve("0,0|2x2|red\n");
     const port = server.port;
     const evil = { host: `evil.example:${port}`, origin: `http://evil.example:${port}` };
     expect(
@@ -207,7 +224,7 @@ describe("host check", () => {
     expect((await fetch(`${base}/api/model.kl`, { headers: { host: evil.host } })).status).toBe(
       403,
     );
-    expect(await readFile(file, "utf8")).toBe("2x2 red 0,0\n");
+    expect(await readFile(file, "utf8")).toBe("0,0|2x2|red\n");
     expect(
       (await fetch(`${base}/api/model.kl`, { headers: { host: `localhost:${port}` } })).status,
     ).toBe(200);

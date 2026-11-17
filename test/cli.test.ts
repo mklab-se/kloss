@@ -73,7 +73,7 @@ describe("serve", () => {
   test("an invalid model file stops with its line number", async () => {
     dir ||= await mkdtemp(join(tmpdir(), "kloss-cli-"));
     const bad = join(dir, "bad.kl");
-    await writeFile(bad, "2x2 red 0,0\n2x2 teal 0,0\n");
+    await writeFile(bad, "0,0|2x2|red\n0,0|2x2|teal\n");
     const r = await run("serve", bad, "--port", "0");
     expect(r.code).toBe(2);
     expect(r.stderr).toContain("line 2:");
@@ -99,9 +99,9 @@ describe("serve", () => {
     expect(out).toContain("curl -X POST");
     const res = await fetch(`http://127.0.0.1:${port}/api/klossar`, {
       method: "POST",
-      body: "2x4 blue 2,0",
+      body: "2,0|2x4|blue",
     });
     expect(res.status).toBe(201);
-    expect(await readFile(file, "utf8")).toBe("2x4 blue 2,0\n");
+    expect(await readFile(file, "utf8")).toBe("  2,  0 | 2x4 | blue\n");
   });
 });

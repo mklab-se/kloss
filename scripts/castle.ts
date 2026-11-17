@@ -22,6 +22,8 @@ type Hole = (x: number, y: number) => boolean;
 const heights = new HeightMap();
 const lines: string[] = [];
 let count = 0;
+// What the previous line dropped: the next line leaves out what repeats (and "." repeats it all).
+let previous: KlossInput | undefined;
 
 /**
  * The plan is drawn with the gate at the low y side; the file mirrors it so the gate faces the
@@ -38,7 +40,9 @@ function place(k: KlossInput, level: number, what: string): void {
     throw new Error(`${what}: ${formatLine(k)} would land on level ${landed}, not ${level}`);
   }
   heights.place(k);
-  lines.push(formatLine(facingViewer(k)));
+  const out = facingViewer(k);
+  lines.push(formatLine(out, previous, 3));
+  previous = out;
   count++;
 }
 

@@ -1,14 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import {
+  type Carry,
+  coordWidth,
   FormatError,
   formatLine,
+  formatModel,
   PALETTE,
   parseKlossJson,
   parseLine,
   parseModel,
   SIZES,
 } from "../../src/core/format.ts";
-import type { ColorName, Size } from "../../src/core/types.ts";
+import type { ColorName, KlossInput, Size } from "../../src/core/types.ts";
 
 function errorOf(fn: () => unknown): FormatError {
   try {
@@ -20,69 +23,103 @@ function errorOf(fn: () => unknown): FormatError {
   throw new Error("expected a FormatError");
 }
 
+const k = (x: number, y: number, size: Size, color: ColorName): KlossInput => ({
+  size,
+  color,
+  x,
+  y,
+});
+const after = (last: KlossInput): Carry => ({ last });
+
 describe("parseLine", () => {
-  test("reads size, color and corner", () => {
-    expect(parseLine("2x4 blue 2,0")).toEqual({ size: "2x4", color: "blue", x: 2, y: 0 });
+  test("reads x,y|size|color", () => {
+    expect(parseLine("1,1|4x2|gray")).toEqual(k(1, 1, "4x2", "gray"));
   });
 
-  test("is case-insensitive and allows a trailing comment", () => {
-    expect(parseLine("  2X2 RED -3,-4  # corner")).toEqual({
-      size: "2x2",
-      color: "red",
-      x: -3,
-      y: -4,
-    });
+  test("allows whitespace around every separator, and is case-insensitive", () => {
+    expect(parseLine("  -3 ,  12 |  2X4 | RED  ")).toEqual(k(-3, 12, "2x4", "red"));
   });
 
-  test("blank and comment lines are null", () => {
+  test("a left-out color is the last one used", () => {
+    expect(parseLine("1,1|2x2", after(k(1, 1, "4x2", "gray")))).toEqual(k(1, 1, "2x2", "gray"));
+  });
+
+  test("a left-out size and color are the last ones used", () => {
+    expect(parseLine("5,1", after(k(1, 1, "2x2", "gray")))).toEqual(k(5, 1, "2x2", "gray"));
+  });
+
+  test("a color alone keeps the last size, with or without an empty size field", () => {
+    const last = after(k(0, 0, "2x4", "blue"));
+    expect(parseLine("3,3|red", last)).toEqual(k(3, 3, "2x4", "red"));
+    expect(parseLine("3,3||red", last)).toEqual(k(3, 3, "2x4", "red"));
+  });
+
+  test("a dot repeats the last drop", () => {
+    expect(parseLine(" . ", after(k(5, 1, "2x2", "gray")))).toEqual(k(5, 1, "2x2", "gray"));
+  });
+
+  test("blank and comment lines are null; a trailing comment is allowed", () => {
     expect(parseLine("")).toBeNull();
     expect(parseLine("   ")).toBeNull();
     expect(parseLine("# hi")).toBeNull();
+    expect(parseLine("1,2|1x1|red # a flag")).toEqual(k(1, 2, "1x1", "red"));
   });
 
-  test("unknown size", () => {
-    expect(errorOf(() => parseLine("3x3 red 0,0")).message).toContain('unknown size "3x3"');
+  test("the first kloss must give both size and color", () => {
+    expect(errorOf(() => parseLine("5,1")).message).toContain("size");
+    expect(errorOf(() => parseLine("5,1|2x2")).message).toContain("color");
+    expect(errorOf(() => parseLine("5,1|red")).message).toContain("size");
+    expect(errorOf(() => parseLine(".")).message).toContain("nothing to repeat");
   });
 
-  test("unknown color", () => {
-    expect(errorOf(() => parseLine("2x2 teal 0,0")).message).toContain('unknown color "teal"');
+  test("unknown size, unknown color, doubled fields", () => {
+    expect(errorOf(() => parseLine("0,0|3x3|red")).message).toContain('"3x3"');
+    expect(errorOf(() => parseLine("0,0|2x2|teal")).message).toContain('"teal"');
+    expect(errorOf(() => parseLine("0,0|2x2|1x1")).message).toContain("two sizes");
+    expect(errorOf(() => parseLine("0,0|red|blue")).message).toContain("two colors");
+    expect(errorOf(() => parseLine("0,0|2x2|red|blue")).message).toContain("expected");
   });
 
-  test("position with a space is refused", () => {
-    expect(errorOf(() => parseLine("2x2 red 1, 2")).message).toContain("position");
+  test("positions must be whole numbers within range", () => {
+    expect(errorOf(() => parseLine("1.5,2|2x2|red")).message).toContain("position");
+    expect(errorOf(() => parseLine("1|2x2|red")).message).toContain("position");
+    expect(errorOf(() => parseLine("10001,0|2x2|red")).message).toContain("10000");
+    expect(parseLine("-10000,10000|2x2|red")).toEqual(k(-10000, 10000, "2x2", "red"));
   });
 
-  test("position must be whole numbers", () => {
-    expect(errorOf(() => parseLine("2x2 red 1.5,2")).message).toContain('"1.5,2"');
-  });
-
-  test("position must be within range", () => {
-    expect(errorOf(() => parseLine("2x2 red 10001,0")).message).toContain("10000");
-    expect(parseLine("2x2 red -10000,10000")).toEqual({
-      size: "2x2",
-      color: "red",
-      x: -10000,
-      y: 10000,
-    });
-  });
-
-  test("missing and extra tokens", () => {
-    expect(errorOf(() => parseLine("2x2 red")).message).toContain("expected");
-    expect(errorOf(() => parseLine("2x2 red 0,0 extra")).message).toContain("expected");
+  test("the old 0.1 format gets a message showing the new way to write it", () => {
+    const e = errorOf(() => parseLine("2x4 blue 2,0"));
+    expect(e.message).toContain('"2,0|2x4|blue"');
   });
 });
 
 describe("parseModel", () => {
+  test("the example from the design: carry-over and repeat", () => {
+    expect(parseModel("1,1|4x2|gray\n1,1|2x2\n5,1\n.\n")).toEqual([
+      k(1, 1, "4x2", "gray"),
+      k(1, 1, "2x2", "gray"),
+      k(5, 1, "2x2", "gray"),
+      k(5, 1, "2x2", "gray"),
+    ]);
+  });
+
+  test("comments and blank lines keep the carried size and color", () => {
+    expect(parseModel("0,0|1x1|red\n\n# tower\n0,0")).toEqual([
+      k(0, 0, "1x1", "red"),
+      k(0, 0, "1x1", "red"),
+    ]);
+  });
+
   test("reports the line number of the first error", () => {
-    const e = errorOf(() => parseModel("# t\n2x2 red 0,0\n\n2x2 bad 0,0\n"));
+    const e = errorOf(() => parseModel("# t\n0,0|2x2|red\n\n0,0|2x2|teal\n"));
     expect(e.line).toBe(4);
     expect(e.message.startsWith("line 4: ")).toBe(true);
   });
 
   test("reads CRLF files with a BOM", () => {
-    expect(parseModel("﻿2x2 red 0,0\r\n1x1 blue 1,1\r\n")).toEqual([
-      { size: "2x2", color: "red", x: 0, y: 0 },
-      { size: "1x1", color: "blue", x: 1, y: 1 },
+    expect(parseModel("﻿0,0|2x2|red\r\n1,1|1x1|blue\r\n")).toEqual([
+      k(0, 0, "2x2", "red"),
+      k(1, 1, "1x1", "blue"),
     ]);
   });
 
@@ -92,28 +129,63 @@ describe("parseModel", () => {
 });
 
 describe("formatLine", () => {
+  test("writes every field when there is nothing before it, right-aligned", () => {
+    expect(formatLine(k(2, 0, "2x4", "blue"))).toBe("  2,  0 | 2x4 | blue");
+  });
+
+  test("leaves out what repeats, and writes a dot for an exact repeat", () => {
+    const prev = k(1, 1, "4x2", "gray");
+    expect(formatLine(k(1, 1, "2x2", "gray"), prev)).toBe("  1,  1 | 2x2");
+    expect(formatLine(k(5, 1, "4x2", "gray"), prev)).toBe("  5,  1");
+    expect(formatLine(k(5, 1, "4x2", "red"), prev)).toBe("  5,  1 | red");
+    expect(formatLine(prev, prev)).toBe(".");
+  });
+
+  test("pads to the given width, and wider numbers still fit", () => {
+    expect(formatLine(k(-12, 7, "1x1", "red"), undefined, 4)).toBe(" -12,   7 | 1x1 | red");
+    expect(formatLine(k(12345, 0, "1x1", "red"), undefined, 3)).toBe("12345,  0 | 1x1 | red");
+  });
+
   test("round-trips every size and color", () => {
+    let prev: KlossInput | undefined;
     for (const size of Object.keys(SIZES) as Size[]) {
       for (const color of Object.keys(PALETTE) as ColorName[]) {
-        const k = { size, color, x: -7, y: 12 };
-        expect(parseLine(formatLine(k))).toEqual(k);
+        const next = k(-7, 12, size, color);
+        expect(parseLine(formatLine(next, prev), prev ? after(prev) : undefined)).toEqual(next);
+        prev = next;
       }
     }
   });
+});
 
-  test("writes lowercase", () => {
-    expect(formatLine({ size: "2x4", color: "blue", x: 2, y: 0 })).toBe("2x4 blue 2,0");
+describe("formatModel and coordWidth", () => {
+  test("a whole model round-trips and lines up", () => {
+    const model = [
+      k(1, 1, "4x2", "gray"),
+      k(1, 1, "2x2", "gray"),
+      k(5, 1, "2x2", "gray"),
+      k(5, 1, "2x2", "gray"),
+      k(-120, 30, "1x1", "red"),
+    ];
+    const text = formatModel(model);
+    expect(parseModel(text)).toEqual(model);
+    expect(text).toBe(
+      "   1,   1 | 4x2 | gray\n   1,   1 | 2x2\n   5,   1\n.\n-120,  30 | 1x1 | red\n",
+    );
+  });
+
+  test("coordWidth is at least 3 and fits the widest coordinate", () => {
+    expect(coordWidth([])).toBe(3);
+    expect(coordWidth([k(1, 2, "1x1", "red")])).toBe(3);
+    expect(coordWidth([k(-1000, 2, "1x1", "red")])).toBe(5);
   });
 });
 
 describe("parseKlossJson", () => {
   test("accepts a valid kloss", () => {
-    expect(parseKlossJson({ size: "4x2", color: "tan", x: 1, y: -1 })).toEqual({
-      size: "4x2",
-      color: "tan",
-      x: 1,
-      y: -1,
-    });
+    expect(parseKlossJson({ size: "4x2", color: "tan", x: 1, y: -1 })).toEqual(
+      k(1, -1, "4x2", "tan"),
+    );
   });
 
   test("refuses wrong types and non-objects", () => {

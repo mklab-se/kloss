@@ -54,11 +54,11 @@ test.if(enabled)(
       const res = await fetch(new URL(a ?? "", base));
       expect(res.status).toBe(200);
     }
-    const drop = await fetch(`${base}/api/klossar`, { method: "POST", body: "2x2 red 0,0" });
+    const drop = await fetch(`${base}/api/klossar`, { method: "POST", body: "0,0|2x2|red" });
     expect(drop.status).toBe(201);
     const model = (await (await fetch(`${base}/api/model`)).json()) as { klossar: unknown[] };
     expect(model.klossar).toHaveLength(1);
-    expect(await readFile(join(dir, "m.kl"), "utf8")).toBe("2x2 red 0,0\n");
+    expect(await readFile(join(dir, "m.kl"), "utf8")).toBe("  0,  0 | 2x2 | red\n");
   },
   120_000,
 );

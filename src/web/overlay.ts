@@ -40,7 +40,7 @@ function el<K extends keyof HTMLElementTagNameMap>(
 }
 
 export function createOverlay(root: HTMLElement): Overlay {
-  const curl = `curl -X POST ${location.origin}/api/klossar -d '2x4 blue 2,0'`;
+  const curl = `curl -X POST ${location.origin}/api/klossar -d '2,0|2x4|blue'`;
 
   const info = el("div", "hud hud-info");
   const dot = el("span", "dot");

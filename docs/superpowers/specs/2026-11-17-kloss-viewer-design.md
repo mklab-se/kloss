@@ -72,27 +72,38 @@ MKLab). It is read top to bottom, and each kloss line is one
 drop in order.
 
 ```text
-# tower and the start of a wall
-2x2 red 0,0
-2x2 red 0,0
-2x2 red 0,0
-2x4 blue 2,0
+# a gray base, a tower on it, and the start of a wall
+  1,  1 | 4x2 | gray
+  1,  1 | 2x2
+  5,  1
+.
+  1,  3 | 2x4 | red
 ```
 
-Grammar, one line at a time:
+Grammar, one line at a time (revised 2026-11-18 for 0.2.0; the 0.1 form `2x4 blue 2,0` is
+dropped, and such a line is an error that shows its rewrite):
 
 - Blank lines and lines starting with `#` (after optional whitespace) are ignored but kept in the
-  file.
-- A kloss line is `<size> <color> <x>,<y>`, made of tokens separated by whitespace. A trailing
-  `# comment` is allowed. Matching is case-insensitive, and the API writes lines in lowercase.
+  file. A trailing `# comment` is allowed.
+- A kloss line is `x,y|size|color`. Whitespace is allowed before and after `,` and `|`.
+  Matching is case-insensitive.
+- A left-out size or color is the one from the kloss dropped before it (comments and blank lines
+  do not reset it). `x,y` alone keeps both; `x,y|size` keeps the color; `x,y|color` (or
+  `x,y||color`) keeps the size. Sizes and colors never look alike, so a field is recognised by
+  what it is.
+- A line with just `.` repeats the previous drop exactly.
+- The first kloss in a file (or in an empty model, through the API) must give both size and color;
+  `.` or a short line before that is an error.
 - **Size** `<w>x<d>`: `w` pluppar along x, `d` along y. The allowed sizes are `1x1`, `1x2`, `2x1`,
   `2x2`, `2x4`, `4x2`. The size carries the orientation (`4x2` is a `2x4` turned), so there is no
   orientation flag.
-- **Position** `<x>,<y>`: whole numbers, negative allowed, no spaces around the comma. It is the
-  kloss's corner with the smallest coordinates, so a `2x4` at `2,0` covers x 2..3 and y 0..3.
-  Allowed range: -10000 to 10000 (keeps the numbers sane; the floor is endless in practice).
+- **Position** `x,y`: whole numbers, negative allowed. It is the kloss's corner with the smallest
+  coordinates, so a `2x4` at `2,0` covers x 2..3 and y 0..3. Allowed range: -10000 to 10000.
 - **Color**: one name from the palette below.
 - Anything else is an error that reports its line number, for example `line 7: unknown color "teal"`.
+- **Writing:** kloss writes the compact form (what repeats is left out, `.` for an exact repeat)
+  with coordinates right-aligned to the widest number in the model (at least 3 characters), for
+  example `  5,  1 | 2x2`. Appended lines use the width already in the file.
 
 Height is never written: it comes from where the kloss lands.
 
@@ -155,7 +166,7 @@ comes from the format.
 
 | Method and path | Body | Result |
 | --- | --- | --- |
-| `POST /api/klossar` | JSON `{"size":"2x4","color":"blue","x":2,"y":0}`, or the plain-text line `2x4 blue 2,0` | `201` with the placed kloss: `{ index, size, color, x, y, level }`. Appends the line to the file. `400` for an invalid kloss. |
+| `POST /api/klossar` | JSON `{"size":"2x4","color":"blue","x":2,"y":0}`, or a text line such as `2,0|2x4|blue`, `5,1` or `.` (short forms reuse the model's last kloss) | `201` with the placed kloss: `{ index, size, color, x, y, level }`. Appends the line to the file. `400` for an invalid kloss. |
 | `GET /api/model` | | `{ klossar: [{ index, size, color, x, y, level }] }` |
 | `GET /api/model.kl` | | The file text, `text/plain`. |
 | `PUT /api/model` | The whole model as `text/plain` | Validates everything first. If anything is invalid, `400` and nothing changes. Otherwise it replaces the file and returns the new model. |
@@ -176,7 +187,7 @@ Request bodies are capped at 1 MB and a model at 10000 klossar. Above that the s
 Example:
 
 ```sh
-curl -X POST localhost:4321/api/klossar -d '2x4 blue 2,0'
+curl -X POST localhost:4321/api/klossar -d '2,0|2x4|blue'
 ```
 
 ### Live updates
