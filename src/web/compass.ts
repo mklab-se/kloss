@@ -1,6 +1,8 @@
 /**
- * The compass: a small dial showing which way kloss X and Y point on screen. It turns with the
- * camera and foreshortens when the floor is seen from low down. Clicking it goes to the start view.
+ * The compass: a ghostly dial that looks as if it lies on the floor in the top-left corner. It is
+ * drawn flat in the floor's own plane and transformed with the perspective of the floor right
+ * behind it, so it turns and squashes exactly like the plupp rows there. Clicking it goes to the
+ * start view.
  */
 import { type Camera, type PerspectiveCamera, Plane, Raycaster, Vector2, Vector3 } from "three";
 
@@ -57,77 +59,194 @@ export function compassArrows(
   return { x: on(AXIS_X), y: on(AXIS_Y) };
 }
 
-const SVG = "http://www.w3.org/2000/svg";
-const SIZE = 76;
-const R = 24;
+/** An SVG matrix (without translation): dial units to screen pixels. */
+export interface DialMatrix {
+  a: number;
+  b: number;
+  c: number;
+  d: number;
+}
 
-/** Arrowhead size, in dial units. */
-const HEAD_LENGTH = 9;
-const HEAD_HALF_WIDTH = 5;
+/**
+ * Maps the dial's own plane (u along kloss X, v along kloss Y) onto the screen the way the floor
+ * behind the compass is seen, scaled so the dial's widest radius is `radiusPx`. Near the horizon
+ * the floor is seen almost edge-on; the dial is never flatter than `minRatio` (its narrowest
+ * radius relative to its widest), so it stays readable while still lying on the floor.
+ */
+export function dialMatrix(
+  arrows: { x: ScreenDirection; y: ScreenDirection },
+  radiusPx: number,
+  minRatio = 0.5,
+): DialMatrix {
+  // columns (a, b) and (c, d): where u and v land; SVG y grows downwards
+  let a = arrows.x.dx;
+  let b = -arrows.x.dy;
+  let c = arrows.y.dx;
+  let d = -arrows.y.dy;
+  // singular values: how far the unit circle reaches at its widest and narrowest
+  const p = a * a + b * b;
+  const q = a * c + b * d;
+  const r = c * c + d * d;
+  const det = a * d - b * c;
+  const s = p + r;
+  const widest = Math.sqrt((s + Math.sqrt(Math.max(0, s * s - 4 * det * det))) / 2);
+  const narrowest = Math.abs(det) / Math.max(1e-12, widest);
+  const wanted = minRatio * widest;
+  if (narrowest < wanted) {
+    // the narrow direction in dial space: eigenvector of [[p, q], [q, r]] for narrowest^2
+    const l2 = narrowest * narrowest;
+    let vx: number;
+    let vy: number;
+    if (Math.abs(q) > 1e-12) {
+      vx = q;
+      vy = l2 - p;
+    } else if (p >= r) {
+      vx = 0;
+      vy = 1;
+    } else {
+      vx = 1;
+      vy = 0;
+    }
+    const vl = Math.hypot(vx, vy);
+    vx /= vl;
+    vy /= vl;
+    // where it lands on screen: M v, or (when flat) perpendicular to the wide direction
+    let ux = a * vx + c * vy;
+    let uy = b * vx + d * vy;
+    let ul = Math.hypot(ux, uy);
+    if (ul < 1e-9) {
+      const wx = a * -vy + c * vx;
+      const wy = b * -vy + d * vx;
+      const sign = det < 0 ? -1 : 1;
+      ux = -wy * sign;
+      uy = wx * sign;
+      ul = Math.hypot(ux, uy);
+    }
+    ux /= ul;
+    uy /= ul;
+    const grow = wanted - narrowest;
+    a += grow * ux * vx;
+    b += grow * uy * vx;
+    c += grow * ux * vy;
+    d += grow * uy * vy;
+  }
+  const k = radiusPx / Math.max(1e-9, widest);
+  return { a: a * k, b: b * k, c: c * k, d: d * k };
+}
+
+const SVG = "http://www.w3.org/2000/svg";
+/** The widget's box, and the dial's widest radius on screen, in pixels. */
+const BOX = 200;
+const RADIUS_PX = 74;
+/** The dial is drawn in its own units: the rim is at 100. */
+const RIM = 100;
+
+function svg<K extends keyof SVGElementTagNameMap>(
+  tag: K,
+  attrs: Record<string, string | number> = {},
+  parent?: Element,
+): SVGElementTagNameMap[K] {
+  const e = document.createElementNS(SVG, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, String(v));
+  parent?.append(e);
+  return e;
+}
+
+/** A compass needle pointing along +u, from the centre to `length`. */
+function needle(length: number, width: number): string {
+  const head = length * 0.3;
+  return [
+    [0, -width / 2],
+    [length - head, -width / 2],
+    [length - head, -width * 1.5],
+    [length, 0],
+    [length - head, width * 1.5],
+    [length - head, width / 2],
+    [0, width / 2],
+  ]
+    .map(([x, y]) => `${x},${y}`)
+    .join(" ");
+}
 
 export interface Compass {
-  /** Points the arrows the way X and Y run on the floor right behind the compass. */
+  /** Lays the dial on the floor behind it, as seen by the camera. */
   update(camera: Camera, canvas: HTMLElement): void;
 }
 
 export function createCompass(root: HTMLElement, onClick: () => void): Compass {
   const button = document.createElement("button");
   button.type = "button";
-  button.className = "hud compass";
-  button.title = "Compass: kloss X and Y on the floor here. Click for the start view.";
-  const svg = document.createElementNS(SVG, "svg");
-  svg.setAttribute("viewBox", `${-SIZE / 2} ${-SIZE / 2} ${SIZE} ${SIZE}`);
-  svg.setAttribute("width", String(SIZE));
-  svg.setAttribute("height", String(SIZE));
-  const ring = document.createElementNS(SVG, "circle");
-  ring.setAttribute("r", String(R + 6));
-  ring.setAttribute("class", "compass-ring");
-  svg.append(ring);
+  button.className = "compass";
+  button.title = "Compass: kloss X and Y on the floor. Click for the start view.";
+  button.setAttribute("aria-label", "Compass. Click for the start view.");
+  const box = svg("svg", { width: BOX, height: BOX, viewBox: `0 0 ${BOX} ${BOX}` });
 
-  const arrow = (cls: string, label: string) => {
-    const shaft = document.createElementNS(SVG, "line");
-    shaft.setAttribute("class", `compass-arrow ${cls}`);
-    const head = document.createElementNS(SVG, "polygon");
-    head.setAttribute("class", `compass-head ${cls}`);
-    const text = document.createElementNS(SVG, "text");
-    text.setAttribute("class", `compass-label ${cls}`);
-    text.textContent = label;
-    svg.append(shaft, head, text);
-    return (d: ScreenDirection) => {
-      const len = Math.hypot(d.dx, d.dy);
-      // unit direction in dial space (SVG y grows downwards)
-      const ux = len > 1e-6 ? d.dx / len : 1;
-      const uy = len > 1e-6 ? -d.dy / len : 0;
-      const tip = Math.max(HEAD_LENGTH, len * R);
-      const tx = ux * tip;
-      const ty = uy * tip;
-      const bx = tx - ux * HEAD_LENGTH;
-      const by = ty - uy * HEAD_LENGTH;
-      // the shaft stops inside the head so its round cap never pokes through the point
-      shaft.setAttribute("x1", "0");
-      shaft.setAttribute("y1", "0");
-      shaft.setAttribute("x2", (bx + ux * 1.5).toFixed(2));
-      shaft.setAttribute("y2", (by + uy * 1.5).toFixed(2));
-      const px = -uy * HEAD_HALF_WIDTH;
-      const py = ux * HEAD_HALF_WIDTH;
-      head.setAttribute(
-        "points",
-        `${tx.toFixed(2)},${ty.toFixed(2)} ${(bx + px).toFixed(2)},${(by + py).toFixed(2)} ${(bx - px).toFixed(2)},${(by - py).toFixed(2)}`,
-      );
-      // the label sits just beyond the tip, and fades when the axis points at the viewer
-      text.setAttribute("x", (tx + ux * 7).toFixed(2));
-      text.setAttribute("y", (ty + uy * 7 + 4).toFixed(2));
-      const opacity = String(Math.min(1, 0.3 + len));
-      for (const el of [shaft, head, text]) el.setAttribute("opacity", opacity);
-    };
+  const defs = svg("defs", {}, box);
+  const glass = svg(
+    "radialGradient",
+    { id: "compass-glass", cx: "40%", cy: "35%", r: "75%" },
+    defs,
+  );
+  svg("stop", { offset: "0%", "stop-color": "#ffffff", "stop-opacity": 0.7 }, glass);
+  svg("stop", { offset: "70%", "stop-color": "#ffffff", "stop-opacity": 0.38 }, glass);
+  svg("stop", { offset: "100%", "stop-color": "#e8f0f4", "stop-opacity": 0.5 }, glass);
+
+  // Everything inside `dial` is drawn flat in the floor's plane: u along X, v along Y.
+  const dial = svg("g", { class: "compass-dial" }, box);
+  svg("circle", { r: RIM, class: "compass-disc", fill: "url(#compass-glass)" }, dial);
+  svg("circle", { r: RIM * 0.74, class: "compass-inner" }, dial);
+  for (let deg = 0; deg < 360; deg += 5) {
+    const major = deg % 30 === 0;
+    const r0 = major ? RIM * 0.82 : RIM * 0.9;
+    const a = (deg * Math.PI) / 180;
+    svg(
+      "line",
+      {
+        x1: Math.cos(a) * r0,
+        y1: Math.sin(a) * r0,
+        x2: Math.cos(a) * RIM * 0.97,
+        y2: Math.sin(a) * RIM * 0.97,
+        class: major ? "compass-tick major" : "compass-tick",
+      },
+      dial,
+    );
+  }
+  svg("line", { x1: -RIM * 0.74, y1: 0, x2: RIM * 0.74, y2: 0, class: "compass-cross" }, dial);
+  svg("line", { x1: 0, y1: -RIM * 0.74, x2: 0, y2: RIM * 0.74, class: "compass-cross" }, dial);
+  // -X and -Y: short grey stubs
+  svg(
+    "polygon",
+    { points: needle(RIM * 0.42, 7), class: "compass-stub", transform: "rotate(180)" },
+    dial,
+  );
+  svg(
+    "polygon",
+    { points: needle(RIM * 0.42, 7), class: "compass-stub", transform: "rotate(270)" },
+    dial,
+  );
+  // +Y points along v; +X along u
+  svg(
+    "polygon",
+    { points: needle(RIM * 0.86, 9), class: "compass-needle axis-y", transform: "rotate(90)" },
+    dial,
+  );
+  svg("polygon", { points: needle(RIM * 0.86, 9), class: "compass-needle axis-x" }, dial);
+  // a plupp-shaped plus at the centre
+  svg(
+    "path",
+    { d: "M-4,-12 H4 V-4 H12 V4 H4 V12 H-4 V4 H-12 V-4 H-4 Z", class: "compass-hub" },
+    dial,
+  );
+  const label = (text: string, x: number, y: number, cls: string) => {
+    const e = svg("text", { x, y, class: `compass-label ${cls}` }, dial);
+    e.textContent = text;
   };
-  const setY = arrow("axis-y", "Y");
-  const setX = arrow("axis-x", "X");
-  const hub = document.createElementNS(SVG, "circle");
-  hub.setAttribute("r", "2.6");
-  hub.setAttribute("class", "compass-hub");
-  svg.append(hub);
-  button.append(svg);
+  label("X", RIM * 1.2, 9, "axis-x");
+  label("Y", 0, RIM * 1.2 + 9, "axis-y");
+  label("-X", -RIM * 1.18, 6, "minus");
+  label("-Y", 0, -RIM * 1.13, "minus");
+
+  button.append(box);
   button.addEventListener("click", onClick);
   root.append(button);
 
@@ -141,16 +260,14 @@ export function createCompass(root: HTMLElement, onClick: () => void): Compass {
         ((b.left + b.width / 2 - c.left) / c.width) * 2 - 1,
         -(((b.top + b.height / 2 - c.top) / c.height) * 2 - 1),
       );
-      const a = compassArrows(camera, at);
-      // the longer arrow reaches the rim; the other keeps its length relative to it
-      const scale = 1 / Math.max(1e-6, Math.hypot(a.x.dx, a.x.dy), Math.hypot(a.y.dx, a.y.dy));
-      a.x = { dx: a.x.dx * scale, dy: a.x.dy * scale };
-      a.y = { dx: a.y.dx * scale, dy: a.y.dy * scale };
-      const key = `${a.x.dx.toFixed(3)},${a.x.dy.toFixed(3)},${a.y.dx.toFixed(3)},${a.y.dy.toFixed(3)}`;
-      if (key === last) return;
-      last = key;
-      setX(a.x);
-      setY(a.y);
+      const m = dialMatrix(compassArrows(camera, at), RADIUS_PX);
+      const s = 1 / RIM;
+      const matrix = [m.a * s, m.b * s, m.c * s, m.d * s, BOX / 2, BOX / 2]
+        .map((v) => v.toFixed(4))
+        .join(" ");
+      if (matrix === last) return;
+      last = matrix;
+      dial.setAttribute("transform", `matrix(${matrix})`);
     },
   };
 }

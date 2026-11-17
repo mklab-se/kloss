@@ -9,9 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- The compass now matches the plupp rows on the floor right behind it: with perspective, the X and Y
-  directions in the corner differ from those in the middle of the view. Its arrows have real
-  arrowheads.
+- The compass now lies on the floor in the top-left corner: a bigger, more detailed, slightly
+  transparent dial (ticks, needles, a plupp at the centre) hovering just above the ground. It is
+  drawn with the perspective of the floor behind it, so it lines up with the plupp rows there.
 
 ## [0.2.0] - 2026-11-18
 

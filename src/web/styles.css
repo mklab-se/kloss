@@ -202,52 +202,97 @@ body {
   word-break: break-all;
 }
 
+/* The compass: lies on the floor in the top-left corner, a slightly transparent ghost. */
 .compass {
-  left: 16px;
-  bottom: 16px;
-  width: 84px;
-  height: 84px;
+  position: absolute;
+  top: 48px;
+  left: 0;
+  width: 200px;
+  height: 200px;
   padding: 0;
-  justify-content: center;
-  border-radius: 50%;
+  border: 0;
+  background: none;
+  pointer-events: auto;
   cursor: pointer;
+  opacity: 0.88;
+  transition: opacity 200ms;
 }
 
-.compass-ring {
+.compass:hover {
+  opacity: 1;
+}
+
+.compass svg {
+  display: block;
+  overflow: visible;
+}
+
+.compass-dial {
+  /* hovering a block or two above the ground: a close, fairly sharp shadow */
+  filter: drop-shadow(1px 3px 1.5px rgba(20, 45, 20, 0.38));
+}
+
+.compass-disc {
+  stroke: rgba(255, 255, 255, 0.95);
+  stroke-width: 2.5;
+}
+
+.compass-inner {
   fill: none;
-  stroke: var(--line);
+  stroke: rgba(31, 35, 40, 0.18);
+  stroke-width: 1.2;
+}
+
+.compass-tick {
+  stroke: rgba(31, 35, 40, 0.35);
+  stroke-width: 1.2;
+}
+
+.compass-tick.major {
+  stroke: rgba(31, 35, 40, 0.6);
+  stroke-width: 2.2;
+}
+
+.compass-cross {
+  stroke: rgba(31, 35, 40, 0.14);
   stroke-width: 1;
+  stroke-dasharray: 4 4;
 }
 
-.compass-arrow {
-  stroke-width: 2.6;
-  stroke-linecap: round;
-}
-
+.compass-needle,
+.compass-stub,
 .compass-hub {
-  fill: var(--ink);
+  stroke: rgba(255, 255, 255, 0.95);
+  stroke-width: 2;
+  stroke-linejoin: round;
 }
 
-.compass-arrow.axis-x {
-  stroke: #d12a1f;
-}
-
-.compass-head.axis-x {
+.compass-needle.axis-x {
   fill: #d12a1f;
 }
 
-.compass-arrow.axis-y {
-  stroke: #2f8a4c;
-}
-
-.compass-head.axis-y {
+.compass-needle.axis-y {
   fill: #2f8a4c;
 }
 
+.compass-stub {
+  fill: rgba(93, 102, 112, 0.65);
+}
+
+.compass-hub {
+  fill: #f2f0ea;
+  stroke: rgba(31, 35, 40, 0.55);
+  stroke-width: 1.5;
+}
+
 .compass-label {
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 26px;
+  font-weight: 800;
   text-anchor: middle;
+  paint-order: stroke;
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 5px;
+  stroke-linejoin: round;
 }
 
 .compass-label.axis-x {
@@ -256,4 +301,10 @@ body {
 
 .compass-label.axis-y {
   fill: #2f8a4c;
+}
+
+.compass-label.minus {
+  font-size: 18px;
+  font-weight: 700;
+  fill: rgba(93, 102, 112, 0.85);
 }

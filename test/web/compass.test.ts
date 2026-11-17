@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { PerspectiveCamera, Plane, Raycaster, Vector2, Vector3 } from "three";
-import { compassArrows } from "../../src/web/compass.ts";
+import { compassArrows, dialMatrix } from "../../src/web/compass.ts";
 
 function cameraAt(x: number, y: number, z: number): PerspectiveCamera {
   const c = new PerspectiveCamera(45, 16 / 9, 0.1, 1000);
@@ -68,5 +68,50 @@ describe("compassArrows at the compass's own spot", () => {
   test("looking at the sky there, it falls back to the directions at the centre", () => {
     const camera = cameraAt(0, 1, 30);
     expect(compassArrows(camera, new Vector2(-0.8, 0.95))).toEqual(compassArrows(camera));
+  });
+});
+
+describe("dialMatrix (the compass lying on the floor)", () => {
+  test("seen straight from above with X right and Y down the screen, it is a plain circle", () => {
+    const m = dialMatrix({ x: { dx: 1, dy: 0 }, y: { dx: 0, dy: -1 } }, 60);
+    expect(m.a).toBeCloseTo(60, 6);
+    expect(m.b).toBeCloseTo(0, 6);
+    expect(m.c).toBeCloseTo(0, 6);
+    expect(m.d).toBeCloseTo(60, 6);
+  });
+
+  test("seen at a slant, the dial squashes along Y and keeps its widest radius", () => {
+    const m = dialMatrix({ x: { dx: 1, dy: 0 }, y: { dx: 0, dy: -0.4 } }, 60, 0);
+    expect(m.a).toBeCloseTo(60, 6);
+    expect(m.d).toBeCloseTo(24, 6);
+  });
+
+  test("near the horizon it never gets flatter than half as tall as it is wide", () => {
+    const m = dialMatrix({ x: { dx: 1, dy: 0 }, y: { dx: 0, dy: -0.1 } }, 60);
+    expect(m.a).toBeCloseTo(60, 6);
+    expect(m.d).toBeCloseTo(30, 6);
+  });
+
+  test("the squash limit keeps the direction of a turned, slanted dial", () => {
+    const s = Math.SQRT1_2;
+    // a 45 degree turn, very flat
+    const m = dialMatrix({ x: { dx: s, dy: s * 0.1 }, y: { dx: s, dy: -s * 0.1 } }, 50);
+    // the widest radius stays horizontal on screen, the narrow one is half of it
+    const lengths = [Math.hypot(m.a + m.c, m.b + m.d), Math.hypot(m.a - m.c, m.b - m.d)].map(
+      (l) => l / Math.SQRT2,
+    );
+    expect(Math.max(...lengths)).toBeCloseTo(50, 4);
+    expect(Math.min(...lengths)).toBeCloseTo(25, 4);
+    expect(Math.abs(m.b + m.d)).toBeLessThan(1e-6);
+  });
+
+  test("turned, the dial turns with the floor and its widest radius stays the same", () => {
+    const s = Math.SQRT1_2;
+    const m = dialMatrix({ x: { dx: s, dy: s }, y: { dx: s, dy: -s } }, 50);
+    // SVG y grows downwards, so screen-up becomes negative b
+    expect(m.a).toBeCloseTo(50 * s, 6);
+    expect(m.b).toBeCloseTo(-50 * s, 6);
+    const widest = Math.max(Math.hypot(m.a, m.b), Math.hypot(m.c, m.d));
+    expect(widest).toBeCloseTo(50, 6);
   });
 });
