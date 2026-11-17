@@ -7,6 +7,7 @@ import { SIZES } from "../core/format.ts";
 import { KLOSS_HEIGHT, PLUPP_HEIGHT } from "../core/types.ts";
 import { CadController } from "./camera.ts";
 import { DropQueue } from "./drops.ts";
+import { createOverlay } from "./overlay.ts";
 import { KlossScene } from "./scene.ts";
 import { connect } from "./stream.ts";
 
@@ -17,6 +18,22 @@ const view = new KlossScene(canvas);
 const drops = new DropQueue(view);
 const camera = new CadController(view);
 camera.attach(canvas);
+
+const overlayRoot = document.querySelector<HTMLElement>("#overlay");
+if (!overlayRoot) throw new Error("missing #overlay");
+const overlay = createOverlay(overlayRoot);
+overlay.setAutoFit(camera.autoFit);
+camera.onAutoFitChange((on) => overlay.setAutoFit(on));
+overlay.onAutoFitClick(() => {
+  camera.autoFit = !camera.autoFit;
+});
+
+async function showFileName(): Promise<void> {
+  try {
+    const res = await fetch("/api/model");
+    overlay.setFile(((await res.json()) as { file: string }).file);
+  } catch {}
+}
 
 function resize(): void {
   view.resize(window.innerWidth, window.innerHeight);
@@ -33,6 +50,7 @@ connect({
     view.setModel(klossar);
     if (firstModel) camera.frame(view.modelBounds(), true);
     firstModel = false;
+    void showFileName();
   },
   onDrop(kloss) {
     drops.push(kloss);
@@ -43,11 +61,19 @@ connect({
       new Vector3(kloss.x + w, (kloss.level + 1) * KLOSS_HEIGHT + PLUPP_HEIGHT, kloss.y + d),
     );
   },
-  onStatus() {},
+  onStatus(s) {
+    overlay.setStatus(s);
+  },
 });
 
 let last = performance.now();
+let shownCount = -1;
 function loop(now: number): void {
+  // The count follows what has landed, so it ticks up as klossar arrive.
+  if (view.count !== shownCount) {
+    shownCount = view.count;
+    overlay.setCount(shownCount);
+  }
   const dt = Math.min(100, now - last);
   last = now;
   const dropping = drops.update(now);
