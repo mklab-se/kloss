@@ -45,11 +45,13 @@
     "sbom": "bun scripts/sbom.ts"
   },
   "dependencies": {
-    "commander": "^15.1.0"
+    "commander": "^15.1.0",
+    "three": "^0.187.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.8",
     "@types/bun": "^1.4.4",
+    "@types/three": "^0.187.0",
     "typescript": "^7.0.2"
   }
 }
