@@ -35,8 +35,9 @@ import { KLOSS_HEIGHT, PLUPP_HEIGHT, type PlacedKloss } from "../core/types.ts";
 import { KlossInstances } from "./instances.ts";
 import { buildPluppGeometry } from "./kloss-geometry.ts";
 
-const BACKGROUND = "#e8ecf1";
-const FLOOR = "#b9c0c8";
+const BACKGROUND = "#dde8f0";
+const FLOOR = "#5c9a55";
+const FLOOR_PLUPP = "#64a35d";
 /** Floor pluppar drawn in 3D within this many cells of the target; beyond, a texture shows them. */
 const FLOOR_PATCH = 26;
 /** The sun's direction (from the target towards the sun). */
@@ -59,8 +60,9 @@ function floorTexture(): CanvasTexture {
     g.fillRect(c - a + dx, c - b + dy, 2 * a, 2 * b);
     g.fillRect(c - b + dx, c - a + dy, 2 * b, 2 * a);
   };
-  plus(size * 0.03, size * 0.03, "rgba(0,0,0,0.10)");
-  plus(0, 0, "#c1c8cf");
+  plus(size * 0.035, size * 0.035, "rgba(0,0,0,0.22)");
+  plus(-size * 0.015, -size * 0.015, "rgba(255,255,255,0.22)");
+  plus(0, 0, FLOOR_PLUPP);
   const t = new CanvasTexture(canvas);
   t.colorSpace = SRGBColorSpace;
   t.wrapS = RepeatWrapping;
@@ -102,7 +104,7 @@ export class KlossScene {
     this.scene.environmentIntensity = 0.35;
     pmrem.dispose();
 
-    this.scene.add(new HemisphereLight("#ffffff", "#9c958c", 0.55));
+    this.scene.add(new HemisphereLight("#ffffff", "#7d8f74", 0.55));
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
     this.sun.shadow.bias = -0.0004;
@@ -123,7 +125,7 @@ export class KlossScene {
     const side = 2 * FLOOR_PATCH + 1;
     this.floorPluppar = new InstancedMesh(
       buildPluppGeometry().scale(1, 0.999, 1),
-      new MeshStandardMaterial({ color: "#bcc3cb", roughness: 0.75 }),
+      new MeshStandardMaterial({ color: FLOOR_PLUPP, roughness: 0.7 }),
       side * side,
     );
     this.floorPluppar.receiveShadow = true;
@@ -213,13 +215,14 @@ export class KlossScene {
   private follow(): void {
     const dist = this.camera.position.distanceTo(this.target);
     this.camera.near = Math.max(0.05, dist / 200);
-    this.camera.far = Math.max(500, dist * 30);
+    this.camera.far = Math.max(1000, dist * 40);
     this.camera.updateProjectionMatrix();
     const fog = this.scene.fog as Fog;
-    fog.near = dist * 1.6;
-    fog.far = dist * 5 + 40;
+    // Fog only softens the horizon, far beyond the model.
+    fog.near = dist * 4 + 60;
+    fog.far = dist * 12 + 200;
 
-    const size = Math.max(400, Math.ceil(dist * 12));
+    const size = Math.max(1000, Math.ceil(dist * 40));
     const cx = Math.round(this.target.x);
     const cz = Math.round(this.target.z);
     if (size !== this.floorSize || cx !== this.floor.position.x || cz !== this.floor.position.z) {
