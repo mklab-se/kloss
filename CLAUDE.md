@@ -56,7 +56,8 @@ single-file release binaries.
   `/events` SSE, `/healthz`; refuses changes from foreign `Origin`s).
 - `src/web/`: the browser app (Three.js), bundled by Bun from `index.html` and embedded in the
   compiled binary.
-- `examples/castle.kl`: an example model. `.claude/launch.json` serves a git-ignored
+- `examples/castle.kl`: the example castle, generated level by level by `scripts/castle.ts` (every
+  kloss is checked against the landing rule; edit the script, not the file). `.claude/launch.json` serves a git-ignored
   `scratch.kl` (`bun --hot src/cli.ts serve`).
 - `src/meta.ts`: tool name, package name, version and description (version and description are
   read from `package.json`, the single source of truth).
