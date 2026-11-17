@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * bun-templ command-line entry point.
+ * kloss command-line entry point.
  *
  * `buildProgram()` defines the CLI (commander); `main()` runs it, wires the global
  * flags and the background update check. Add commands under `src/commands/` and
@@ -33,16 +33,16 @@ export function buildProgram(): Command {
     .option("--no-color", "disable colored output")
     .addHelpText(
       "after",
-      `\nRun without a command to print "Hello world!". The reusable plumbing (completions, update checks, config paths and releases) is wired up so you can focus on your tool's own commands.`,
+      `\nkloss (Swedish for "building block") lets you build models from virtual bricks with plus-shaped connectors on an endless floor, by hand or through MCP. This early release claims the name; building is coming soon.`,
     )
     .hook("preAction", (cmd) => {
       const opts = cmd.optsWithGlobals<GlobalOptions>();
       if (!opts.color) setColorEnabled(false);
     })
-    // No command: the almost-empty default. Replace this with your tool's
-    // behaviour, or route to a real command. `--help` still works.
+    // No command: the banner and a note on what is coming. `--help` still works.
     .action(() => {
-      console.log("Hello world!");
+      printBannerWithVersion();
+      console.log("Building with bricks is coming soon. Run kloss --help for what works today.");
     });
 
   program

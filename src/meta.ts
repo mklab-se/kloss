@@ -2,9 +2,9 @@
 import pkg from "../package.json" with { type: "json" };
 
 /** The command name users type (the key of `bin` in package.json). */
-export const TOOL = "bun-templ";
+export const TOOL = "kloss";
 
-/** The npm package name (scoped, e.g. `@mklab-se/bun-templ`). */
+/** The npm package name (scoped, e.g. `@mklab-se/kloss`). */
 export const PACKAGE_NAME: string = pkg.name;
 
 export const VERSION: string = pkg.version;
@@ -12,4 +12,4 @@ export const VERSION: string = pkg.version;
 export const DESCRIPTION: string = pkg.description;
 
 /** Set to any value to skip the background update check. */
-export const NO_UPDATE_CHECK_ENV = "BUN_TEMPL_NO_UPDATE_CHECK";
+export const NO_UPDATE_CHECK_ENV = "KLOSS_NO_UPDATE_CHECK";

@@ -4,12 +4,19 @@ Guidance for Claude Code (and other agents) working in this repository.
 
 ## What this is
 
-<!-- template-only:start -->
-`bun-templ` is a **template repository** for MKLab command-line tools built on Bun and TypeScript.
-New tools are created from it via GitHub's "Use this template", then renamed with
-`bun run rename <name> "<description>"` (see "Using this template" in `README.md`). Keep it generic:
-it should run, test, build and pass CI as-is, while carrying no tool-specific logic.
-<!-- template-only:end -->
+`kloss` (Swedish for "building block") builds simple models from virtual bricks on an endless
+floor, by hand or through an MCP server. It will be used to demonstrate the power and the
+potential risks of MCP servers.
+
+Vocabulary (our own, not Lego's): a brick is a **kloss** (plural klossar); sizes 1x1, 1x2, 2x2 and
+2x4 are counted in **pluppar**; a **plupp** is a plus-shaped connector bump on top, one third of a
+brick's height, fitting a plus-shaped **socket** underneath. One plupp in a socket is a strong
+enough joint. The **floor** is endless and covered in pluppar. A kloss not held by the floor or
+another kloss falls, tumbles and is removed.
+
+Status: v0.0.1 claims the name; domain features come next. On npm the package is
+`@mklab-se/kloss` (bin `kloss`).
+
 
 ## Template lineage
 

@@ -4,7 +4,7 @@ description: "Release a new version: upgrade Bun and dependencies, bump version,
 argument-hint: "<major|minor|patch>"
 ---
 
-Release a new version of bun-templ.
+Release a new version of kloss.
 
 ## Input
 
@@ -16,7 +16,7 @@ $ARGUMENTS must be one of: `major`, `minor`, `patch`. If empty or invalid, stop 
 
 - Read the current `version` from `package.json`
 - Apply the semver bump: `patch` 0.1.0 -> 0.1.1, `minor` 0.1.0 -> 0.2.0, `major` 0.1.0 -> 1.0.0
-- Show the user: "Releasing bun-templ v{OLD} -> v{NEW}"
+- Show the user: "Releasing kloss v{OLD} -> v{NEW}"
 
 ### 2. Upgrade Bun and every dependency to the latest version
 
@@ -30,7 +30,7 @@ $ARGUMENTS must be one of: `major`, `minor`, `patch`. If empty or invalid, stop 
 ### 3. Pre-flight checks
 
 - `bun run format`, then `bun run check` (typecheck + lint + test): abort on any failure
-- `bun run build && ./dist/bun-templ --version`: the compiled binary must run
+- `bun run build && ./dist/kloss --version`: the compiled binary must run
 - `grep -rn --exclude-dir=node_modules --exclude-dir=.git $'\xe2\x80\x94' .` must print nothing
 - `git status`: abort if there are uncommitted changes that are NOT docs, version, or dependency files
 
@@ -54,15 +54,15 @@ $ARGUMENTS must be one of: `major`, `minor`, `patch`. If empty or invalid, stop 
 ### 7. Watch and verify
 
 - The tag push triggers the Release workflow. Do NOT declare success yet: find it with
-  `gh run list --repo mklab-se/bun-templ --workflow release.yml --limit 1`, then
-  `gh run watch <id> --repo mklab-se/bun-templ --exit-status`
+  `gh run list --repo mklab-se/kloss --workflow release.yml --limit 1`, then
+  `gh run watch <id> --repo mklab-se/kloss --exit-status`
 - On failure: `gh run view <id> --log-failed`, fix the cause, and re-release as a patch
 - When green, confirm:
-  - `gh release view v{NEW} --repo mklab-se/bun-templ --json assets -q '.assets[].name'` lists
+  - `gh release view v{NEW} --repo mklab-se/kloss --json assets -q '.assets[].name'` lists
     3 `.tar.gz`, 1 `.zip` and 4 `.cdx.json`
-  - `npm view @mklab-se/bun-templ version` shows {NEW} (if the npm job fails with an authentication
+  - `npm view @mklab-se/kloss version` shows {NEW} (if the npm job fails with an authentication
     error, check the package's Trusted Publisher settings on npmjs.com: workflow `release.yml`, environment `npm`)
-  - `Formula/bun-templ.rb` in `mklab-se/homebrew-tap` carries {NEW}
+  - `Formula/kloss.rb` in `mklab-se/homebrew-tap` carries {NEW}
 
 ### 8. Confirm
 

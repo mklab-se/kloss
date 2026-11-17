@@ -3,7 +3,7 @@ import { buildProgram } from "../src/cli.ts";
 import { generateCompletion } from "../src/commands/completion.ts";
 import { TOOL, VERSION } from "../src/meta.ts";
 
-const env = { ...process.env, BUN_TEMPL_NO_UPDATE_CHECK: "1", NO_COLOR: "1" };
+const env = { ...process.env, KLOSS_NO_UPDATE_CHECK: "1", NO_COLOR: "1" };
 
 async function run(...args: string[]) {
   const proc = Bun.spawn(["bun", "src/cli.ts", ...args], { env, stdout: "pipe", stderr: "pipe" });
@@ -16,10 +16,11 @@ async function run(...args: string[]) {
 }
 
 describe("cli", () => {
-  test("no command prints Hello world!", async () => {
+  test("no command shows the banner and a coming-soon note", async () => {
     const r = await run();
     expect(r.code).toBe(0);
-    expect(r.stdout).toBe("Hello world!\n");
+    expect(r.stdout).toContain(`v${VERSION}`);
+    expect(r.stdout).toContain("coming soon");
   });
 
   test("--version prints the package version", async () => {

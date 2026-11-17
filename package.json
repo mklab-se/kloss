@@ -1,24 +1,27 @@
 {
-  "name": "@mklab-se/bun-templ",
-  "version": "0.1.0",
-  "description": "A template for building Bun command-line tools",
+  "name": "@mklab-se/kloss",
+  "version": "0.0.1",
+  "description": "Build models from virtual bricks, by hand or through MCP",
   "keywords": [
+    "bricks",
+    "building",
+    "3d",
+    "model",
+    "mcp",
     "cli",
-    "bun",
-    "template",
-    "starter"
+    "bun"
   ],
   "license": "MIT",
   "author": "Kristofer Liljeblad <kristofer@mklab.se>",
-  "homepage": "https://github.com/mklab-se/bun-templ",
+  "homepage": "https://github.com/mklab-se/kloss",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mklab-se/bun-templ.git"
+    "url": "git+https://github.com/mklab-se/kloss.git"
   },
-  "bugs": "https://github.com/mklab-se/bun-templ/issues",
+  "bugs": "https://github.com/mklab-se/kloss/issues",
   "type": "module",
   "bin": {
-    "bun-templ": "src/cli.ts"
+    "kloss": "src/cli.ts"
   },
   "files": [
     "src",
@@ -38,9 +41,8 @@
     "lint": "biome ci .",
     "format": "biome check --write .",
     "check": "bun run typecheck && bun run lint && bun test",
-    "build": "bun build src/cli.ts --compile --minify --sourcemap --outfile dist/bun-templ",
-    "sbom": "bun scripts/sbom.ts",
-    "rename": "bun scripts/rename.ts"
+    "build": "bun build src/cli.ts --compile --minify --sourcemap --outfile dist/kloss",
+    "sbom": "bun scripts/sbom.ts"
   },
   "dependencies": {
     "commander": "^15.1.0"

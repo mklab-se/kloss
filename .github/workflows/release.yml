@@ -69,12 +69,12 @@ jobs:
           EXT=""
           [ "${{ matrix.archive }}" = "zip" ] && EXT=".exe"
           bun build src/cli.ts --compile --minify --sourcemap \
-            --target=${{ matrix.bun-target }} --outfile "dist/bun-templ${EXT}"
+            --target=${{ matrix.bun-target }} --outfile "dist/kloss${EXT}"
 
       # macOS refuses to run unsigned arm64 binaries; an ad-hoc signature is enough
       - name: Ad-hoc sign (macOS)
         if: runner.os == 'macOS'
-        run: codesign --force --sign - dist/bun-templ
+        run: codesign --force --sign - dist/kloss
 
       - name: Smoke test
         if: matrix.smoke
@@ -82,26 +82,26 @@ jobs:
         run: |
           EXT=""
           [ "${{ matrix.archive }}" = "zip" ] && EXT=".exe"
-          "./dist/bun-templ${EXT}" --version
+          "./dist/kloss${EXT}" --version
 
       - name: Package (Unix)
         if: matrix.archive == 'tar.gz'
-        run: tar -czf "bun-templ-${{ github.ref_name }}-${{ matrix.target }}.tar.gz" -C dist bun-templ
+        run: tar -czf "kloss-${{ github.ref_name }}-${{ matrix.target }}.tar.gz" -C dist kloss
 
       - name: Package (Windows)
         if: matrix.archive == 'zip'
         shell: pwsh
-        run: Compress-Archive -Path dist/bun-templ.exe -DestinationPath "bun-templ-${{ github.ref_name }}-${{ matrix.target }}.zip"
+        run: Compress-Archive -Path dist/kloss.exe -DestinationPath "kloss-${{ github.ref_name }}-${{ matrix.target }}.zip"
 
       - name: SBOM (CycloneDX)
         shell: bash
-        run: bun scripts/sbom.ts --target ${{ matrix.target }} > "bun-templ-${{ github.ref_name }}-${{ matrix.target }}.cdx.json"
+        run: bun scripts/sbom.ts --target ${{ matrix.target }} > "kloss-${{ github.ref_name }}-${{ matrix.target }}.cdx.json"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
-          name: bun-templ-${{ matrix.target }}
-          path: bun-templ-${{ github.ref_name }}-${{ matrix.target }}.*
+          name: kloss-${{ matrix.target }}
+          path: kloss-${{ github.ref_name }}-${{ matrix.target }}.*
 
   # Create GitHub Release with all binaries and SBOMs
   github-release:
@@ -168,12 +168,12 @@ jobs:
           set -e
           VERSION="${GITHUB_REF_NAME#v}"
           TAG="${GITHUB_REF_NAME}"
-          BASE_URL="https://github.com/mklab-se/bun-templ/releases/download/${TAG}"
+          BASE_URL="https://github.com/mklab-se/kloss/releases/download/${TAG}"
 
           # Download release artifacts and compute SHA256
-          curl -sL "${BASE_URL}/bun-templ-${TAG}-aarch64-apple-darwin.tar.gz" -o aarch64-darwin.tar.gz
-          curl -sL "${BASE_URL}/bun-templ-${TAG}-x86_64-apple-darwin.tar.gz" -o x86_64-darwin.tar.gz
-          curl -sL "${BASE_URL}/bun-templ-${TAG}-x86_64-unknown-linux-gnu.tar.gz" -o x86_64-linux.tar.gz
+          curl -sL "${BASE_URL}/kloss-${TAG}-aarch64-apple-darwin.tar.gz" -o aarch64-darwin.tar.gz
+          curl -sL "${BASE_URL}/kloss-${TAG}-x86_64-apple-darwin.tar.gz" -o x86_64-darwin.tar.gz
+          curl -sL "${BASE_URL}/kloss-${TAG}-x86_64-unknown-linux-gnu.tar.gz" -o x86_64-linux.tar.gz
 
           SHA_AARCH64=$(sha256sum aarch64-darwin.tar.gz | cut -d' ' -f1)
           SHA_X86_64=$(sha256sum x86_64-darwin.tar.gz | cut -d' ' -f1)
@@ -181,53 +181,53 @@ jobs:
 
           # Generate formula
           cat > formula.rb <<RUBY
-          class BunTempl < Formula
-            desc "A template for building Bun command-line tools"
-            homepage "https://github.com/mklab-se/bun-templ"
+          class Kloss < Formula
+            desc "Build models from virtual bricks, by hand or through MCP"
+            homepage "https://github.com/mklab-se/kloss"
             version "${VERSION}"
             license "MIT"
 
             on_macos do
               if Hardware::CPU.arm?
-                url "https://github.com/mklab-se/bun-templ/releases/download/v#{version}/bun-templ-v#{version}-aarch64-apple-darwin.tar.gz"
+                url "https://github.com/mklab-se/kloss/releases/download/v#{version}/kloss-v#{version}-aarch64-apple-darwin.tar.gz"
                 sha256 "${SHA_AARCH64}"
               else
-                url "https://github.com/mklab-se/bun-templ/releases/download/v#{version}/bun-templ-v#{version}-x86_64-apple-darwin.tar.gz"
+                url "https://github.com/mklab-se/kloss/releases/download/v#{version}/kloss-v#{version}-x86_64-apple-darwin.tar.gz"
                 sha256 "${SHA_X86_64}"
               end
             end
 
             on_linux do
-              url "https://github.com/mklab-se/bun-templ/releases/download/v#{version}/bun-templ-v#{version}-x86_64-unknown-linux-gnu.tar.gz"
+              url "https://github.com/mklab-se/kloss/releases/download/v#{version}/kloss-v#{version}-x86_64-unknown-linux-gnu.tar.gz"
               sha256 "${SHA_LINUX}"
             end
 
             def install
-              bin.install "bun-templ"
+              bin.install "kloss"
             end
 
             test do
-              assert_match version.to_s, shell_output("#{bin}/bun-templ --version")
+              assert_match version.to_s, shell_output("#{bin}/kloss --version")
             end
           end
           RUBY
 
           # Push to homebrew-tap repo via GitHub API
           CONTENT=$(base64 -w 0 < formula.rb)
-          FILE_SHA=$(gh api repos/mklab-se/homebrew-tap/contents/Formula/bun-templ.rb --jq '.sha' 2>/dev/null || echo "")
+          FILE_SHA=$(gh api repos/mklab-se/homebrew-tap/contents/Formula/kloss.rb --jq '.sha' 2>/dev/null || echo "")
 
           if [ -n "$FILE_SHA" ]; then
-            gh api repos/mklab-se/homebrew-tap/contents/Formula/bun-templ.rb \
+            gh api repos/mklab-se/homebrew-tap/contents/Formula/kloss.rb \
               -X PUT \
-              -f message="Update bun-templ to ${VERSION}" \
+              -f message="Update kloss to ${VERSION}" \
               -f content="$CONTENT" \
               -f sha="$FILE_SHA" \
               && echo "Homebrew formula updated to ${VERSION}" \
               || echo "::warning::Failed to update Homebrew tap. Add HOMEBREW_TAP_TOKEN secret with repo scope for mklab-se/homebrew-tap."
           else
-            gh api repos/mklab-se/homebrew-tap/contents/Formula/bun-templ.rb \
+            gh api repos/mklab-se/homebrew-tap/contents/Formula/kloss.rb \
               -X PUT \
-              -f message="Add bun-templ ${VERSION}" \
+              -f message="Add kloss ${VERSION}" \
               -f content="$CONTENT" \
               && echo "Homebrew formula created for ${VERSION}" \
               || echo "::warning::Failed to create Homebrew formula. Add HOMEBREW_TAP_TOKEN secret with repo scope for mklab-se/homebrew-tap."
