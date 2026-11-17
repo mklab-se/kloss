@@ -4,3 +4,7 @@ dist/
 .DS_Store
 .env
 .env.*
+
+# Local model served by .claude/launch.json
+/scratch.kloss
+/model.kloss

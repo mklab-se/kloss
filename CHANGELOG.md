@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `kloss serve [file]`: a live 3D view of a kloss model in the browser, and a REST API to build it.
+- The `.kloss` model format: one line drops one kloss (`2x4 blue 2,0`); six sizes and 14 colors.
+- The landing rule: a dropped kloss stops at the first thing it touches; one plupp holds.
+- `examples/castle.kloss`.
+
 ## [0.0.2] - 2026-11-17
 
 ### Changed

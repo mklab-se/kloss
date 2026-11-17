@@ -8,13 +8,16 @@ Guidance for Claude Code (and other agents) working in this repository.
 floor, by hand or through an MCP server. It will be used to demonstrate the power and the
 potential risks of MCP servers.
 
-Vocabulary (our own, not Lego's): a brick is a **kloss** (plural klossar); sizes 1x1, 1x2, 2x2 and
-2x4 are counted in **pluppar**; a **plupp** is a plus-shaped connector bump on top, one third of a
+Vocabulary (our own, not Lego's): a brick is a **kloss** (plural klossar); sizes 1x1, 1x2, 2x1,
+2x2, 2x4 and 4x2 are counted in **pluppar**; a **plupp** is a plus-shaped connector bump on top, one third of a
 brick's height, fitting a plus-shaped **socket** underneath. One plupp in a socket is a strong
 enough joint. The **floor** is endless and covered in pluppar. A kloss not held by the floor or
-another kloss falls, tumbles and is removed.
+another kloss falls, tumbles and is removed (this comes with removal; with drop-only building every
+kloss is always supported).
 
-Status: v0.0.1 claims the name; domain features come next. On npm the package is
+Status: `kloss serve` serves a live 3D view (Three.js) and a REST API that drops klossar into a
+`.kloss` model file. Design: `docs/superpowers/specs/2026-11-17-kloss-viewer-design.md`; plan:
+`docs/superpowers/plans/2026-11-17-kloss-viewer.md`. Walk mode, removal and MCP come later. On npm the package is
 `@mklab-se/kloss` (bin `kloss`).
 
 
@@ -43,9 +46,18 @@ single-file release binaries.
 
 - `src/cli.ts`: entry point (`#!/usr/bin/env bun`). `buildProgram()` defines the commander CLI;
   `main()` parses, applies global flags, and awaits the background update check for at most 1.5 s.
-  The no-command action prints `Hello world!` (the template default); replace it with the tool's
-  behaviour. `--help`/`-h` and `--version`/`-V` come from commander.
-- `src/commands/`: one module per command (`completion.ts` today). Add new commands here.
+  The no-command action prints the banner and how to start (`kloss serve`). `--help`/`-h` and `--version`/`-V` come from commander.
+- `src/commands/`: one module per command (`serve.ts`, `completion.ts`). Add new commands here.
+- `src/core/` (shared by server and browser; no DOM or server APIs): `types.ts` (data model and
+  dimensions), `format.ts` (the `.kloss` line format, sizes, palette), `landing.ts` (height map:
+  a kloss lands on the highest thing under its footprint).
+- `src/server/`: `model-store.ts` (in-memory model persisted to the file through one write queue;
+  emits `model`/`drop` events), `http.ts` (Bun.serve routes: `/` web app via HTML import, `/api/*`,
+  `/events` SSE, `/healthz`; refuses changes from foreign `Origin`s).
+- `src/web/`: the browser app (Three.js), bundled by Bun from `index.html` and embedded in the
+  compiled binary.
+- `examples/castle.kloss`: an example model. `.claude/launch.json` serves a git-ignored
+  `scratch.kloss` (`bun --hot src/cli.ts serve`).
 - `src/meta.ts`: tool name, package name, version and description (version and description are
   read from `package.json`, the single source of truth).
 - `src/banner.ts`: block-letter banner rendered at runtime from the tool name via a built-in 5-row
@@ -74,7 +86,7 @@ single-file release binaries.
 - Bun **latest** (CI installs `bun-version: latest`; `engines.bun` is the floor), TypeScript strict
   (`tsc --noEmit`, TypeScript 7), Biome for lint and format (2 spaces, width 100, double quotes).
 - Prefer Bun built-ins over dependencies (`Bun.YAML`, `Bun.JSONC`, `Bun.semver`, `Bun.file`,
-  `Bun.spawn`, `fetch`). Runtime dependencies today: `commander` only.
+  `Bun.spawn`, `fetch`). Runtime dependencies today: `commander` and `three`.
 - Distribution: npm as `@mklab-se/<tool>` (the `bin` is the short name) via Trusted Publishing
   (GitHub OIDC, no stored token; see README "Releasing"), single-file binaries for
   4 targets on GitHub Releases with CycloneDX SBOMs, and the Homebrew tap `mklab-se/homebrew-tap`.

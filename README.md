@@ -11,7 +11,8 @@
 <!-- "What's new" callout: keep it right after the badges and refresh it on every minor/major
      release (version and a one-line summary of the headline changes). Only link CHANGELOG.md. -->
 <p align="center">
-  <strong>kloss 0.0.1</strong> is here: the name is claimed, and the bricks are on their way.<br>
+  <strong>kloss 0.1</strong> is here: drop klossar through a REST API and watch them fall into a live
+  3D model in your browser.<br>
   <a href="CHANGELOG.md"><strong>What's new</strong></a>
 </p>
 
@@ -21,26 +22,88 @@
 bricks on an endless floor. You can build by hand, or let an AI agent build through kloss's MCP
 server, which also makes kloss a hands-on way to show both the power and the risks of MCP.
 
-> **Status:** 0.0.1 claims the name on npm, GitHub Releases and Homebrew. Building is coming in the
-> next releases.
+## Quick start
 
-### Planned
+```sh
+kloss serve castle.kloss --open
+```
 
-- **Klossar** (bricks) in four sizes, counted in pluppar: 1x1, 1x2, 2x2 and 2x4, in all the usual
-  colors.
-- **Pluppar**: plus-shaped connector bumps on top of every kloss, one third of a brick's height,
-  with matching plus-shaped sockets underneath.
-- **One plupp is enough:** two klossar joined by a single plupp hold together.
-- **An endless floor** covered in pluppar to build on.
-- **Gravity:** a kloss that is not held by the floor or another kloss falls, tumbles and is removed.
-- **Removing** klossar, by hand or through MCP.
+This serves a live 3D view of `castle.kloss` at http://127.0.0.1:4321 (the file is created if it
+does not exist). Now drop klossar into it from another terminal and watch them fall from the sky:
 
+```sh
+curl -X POST localhost:4321/api/klossar -d '2x2 red 0,0'
+curl -X POST localhost:4321/api/klossar -d '2x2 red 0,0'
+curl -X POST localhost:4321/api/klossar -d '2x4 blue 2,0'
+```
+
+The first two make a small tower; the 2x4 lands next to it, the start of a wall. Every drop is also
+appended to the model file. [`examples/castle.kloss`](examples/castle.kloss) is a bigger example.
+
+## The kloss model
+
+A model is a text file read from the top down. Each line drops one kloss from infinitely high, and
+it stops at the first thing it touches: the floor or another kloss. One plupp of overlap is enough
+to hold.
+
+```text
+# tower and the start of a wall
+2x2 red 0,0
+2x2 red 0,0
+2x4 blue 2,0
+```
+
+- **Size** `<w>x<d>`: `w` pluppar along x, `d` along y. Sizes: `1x1`, `1x2`, `2x1`, `2x2`,
+  `2x4`, `4x2` (a `4x2` is a `2x4` turned).
+- **Color**: white, gray, black, red, orange, yellow, lime, green, blue, azure, purple, pink, brown,
+  tan.
+- **Position** `x,y`: the kloss's corner with the smallest coordinates, whole numbers from -10000
+  to 10000. Height is never written; it comes from where the kloss lands.
+- `#` starts a comment. A model holds at most 10000 klossar.
+
+## REST API
+
+| Request | Does |
+| --- | --- |
+| `POST /api/klossar` | Drops one kloss. Body: a line (`2x4 blue 2,0`) or JSON (`{"size":"2x4","color":"blue","x":2,"y":0}`). Returns where it landed (`level`). |
+| `GET /api/model` | The model as JSON: `{ file, klossar: [{ index, size, color, x, y, level }] }`. |
+| `GET /api/model.kloss` | The model file as text. |
+| `PUT /api/model` | Replaces the whole model with a text body; nothing changes if any line is invalid. |
+| `GET /events` | Live updates (Server-Sent Events): `model`, `drop`, `ping`. |
+
+Errors come back as `{ "error": "..." }` (with `"line"` for model errors). The server listens on
+127.0.0.1 only unless you pass `--host 0.0.0.0`, and refuses changes sent by other web pages.
+
+## The 3D view
+
+Built for a Mac trackpad:
+
+| Gesture | Does |
+| --- | --- |
+| Two-finger swipe | Pans left/right and up/down |
+| Pinch | Zooms toward the pointer |
+| Click and drag | Rotates around the model |
+| Shift + drag | Pans |
+| Double-click | Rotate around that point from now on |
+| WASD / arrows, Q/E | Move along the floor, down/up |
+| F | Fit the whole model and turn auto-fit back on |
+| Home | Back to the starting view |
+| ? | Show the controls |
+
+The view keeps the whole model in sight (auto-fit) until you move the camera yourself. With a mouse,
+the wheel zooms and right-drag pans.
+
+### Coming later
+
+- Removing klossar, and the rule that an unsupported kloss falls, tumbles and is removed.
+- Walk mode: walk around inside your model and jump one kloss high.
+- An MCP server, to let an AI agent build (and to show what that can mean).
 
 ## Build & run
 
 ```sh
 bun install                    # install dependencies
-bun start                      # banner + a coming-soon note
+bun start serve --open         # serve model.kloss and open the 3D view
 bun start --help               # show the CLI help
 bun start version              # banner + version
 bun start completion zsh       # generate a zsh completion script

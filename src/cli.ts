@@ -10,6 +10,7 @@ import { Argument, Command } from "commander";
 import { printBannerWithVersion } from "./banner.ts";
 import { dim, setColorEnabled, yellow } from "./color.ts";
 import { generateCompletion, SHELLS, type Shell } from "./commands/completion.ts";
+import { runServe } from "./commands/serve.ts";
 import { DESCRIPTION, NO_UPDATE_CHECK_ENV, PACKAGE_NAME, TOOL, VERSION } from "./meta.ts";
 import { checkForUpdate } from "./update.ts";
 
@@ -33,16 +34,31 @@ export function buildProgram(): Command {
     .option("--no-color", "disable colored output")
     .addHelpText(
       "after",
-      `\nkloss (Swedish for "building block") lets you build models from virtual bricks with plus-shaped connectors on an endless floor, by hand or through MCP. This early release claims the name; building is coming soon.`,
+      `\nkloss (Swedish for "building block") builds models from klossar on an endless floor. Start the live 3D view with "kloss serve", then drop klossar into it through the REST API.`,
     )
     .hook("preAction", (cmd) => {
       const opts = cmd.optsWithGlobals<GlobalOptions>();
       if (!opts.color) setColorEnabled(false);
     })
-    // No command: the banner and a note on what is coming. `--help` still works.
+    // No command: the banner and how to start. `--help` still works.
     .action(() => {
       printBannerWithVersion();
-      console.log("Building with bricks is coming soon. Run kloss --help for what works today.");
+      console.log("Start building with: kloss serve model.kloss");
+    });
+
+  program
+    .command("serve")
+    .description("serve the live 3D view and the REST API for a kloss model")
+    .argument("[file]", "the model file (created if missing)", "model.kloss")
+    .option("-p, --port <n>", "port to listen on", (v) => Number.parseInt(v, 10), 4321)
+    .option(
+      "--host <host>",
+      "address to listen on (0.0.0.0 exposes it to the network)",
+      "127.0.0.1",
+    )
+    .option("--open", "open the view in the browser")
+    .action(async (file: string, opts: { port: number; host: string; open?: boolean }) => {
+      await runServe({ file, port: opts.port, host: opts.host, open: opts.open ?? false });
     });
 
   program

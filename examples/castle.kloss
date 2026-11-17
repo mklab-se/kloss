@@ -1,0 +1,45 @@
+# A small castle: four towers, walls, flags and a balcony that hangs out over the edge.
+
+# Towers, four klossar high
+2x2 gray 0,0
+2x2 gray 0,0
+2x2 gray 0,0
+2x2 gray 0,0
+2x2 gray 8,0
+2x2 gray 8,0
+2x2 gray 8,0
+2x2 gray 8,0
+2x2 gray 0,8
+2x2 gray 0,8
+2x2 gray 0,8
+2x2 gray 0,8
+2x2 gray 8,8
+2x2 gray 8,8
+2x2 gray 8,8
+2x2 gray 8,8
+
+# Front and back walls, two high
+4x2 white 2,0
+2x2 white 6,0
+4x2 white 4,0
+4x2 white 2,8
+2x2 white 6,8
+4x2 white 2,8
+
+# Side walls
+2x4 tan 0,2
+1x2 tan 0,6
+1x2 tan 1,6
+2x4 tan 8,2
+2x1 tan 8,6
+2x1 tan 8,7
+
+# Flags on the towers
+1x1 red 0,0
+1x1 red 9,0
+1x1 red 0,9
+1x1 red 9,9
+
+# A balcony on the front-right tower: half of it hangs out in the air
+2x4 blue 8,-2
+1x1 orange 8,-2
