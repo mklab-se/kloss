@@ -7,12 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-17
+
 ### Added
 
-- `kloss serve [file]`: a live 3D view of a kloss model in the browser, and a REST API to build it.
+- `kloss serve [file]`: a live 3D view of a kloss model in the browser, and a REST API to build it
+  (`POST /api/klossar`, `GET`/`PUT /api/model`, `GET /api/model.kl`, live updates on `/events`).
 - The `.kl` model format: one line drops one kloss (`2x4 blue 2,0`); six sizes and 14 colors.
 - The landing rule: a dropped kloss stops at the first thing it touches; one plupp holds.
+- Klossar fall from the sky and land with a squash and a ring; bursts play in order and speed up.
+- Shiny plastic klossar with plus-shaped pluppar and sockets, soft shadows from above, and an
+  endless green floor that fades softly into the horizon.
+- A CAD camera built for the Mac trackpad: swipe pans, pinch zooms toward the pointer, drag or
+  Shift + swipe rotates, double-click sets the pivot; Q/E rotate, W/A/S/D move, +/- zoom, F or F6
+  fits. Auto-fit keeps the whole model in view until you move the camera, and the camera breathes
+  ever so slightly while idle.
+- An overlay with the file name, kloss count, connection status, the Auto-fit switch and a help
+  card (`?`).
 - `examples/castle.kl`.
+
+### Security
+
+- The server listens on 127.0.0.1 by default, refuses changes from other web pages (Origin), and
+  refuses requests for other host names (DNS rebinding) unless served on 0.0.0.0 on purpose.
 
 ## [0.0.2] - 2026-11-17
 
@@ -27,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release, scaffolded from bun-templ: claims the `kloss` name on npm
   (`@mklab-se/kloss`), GitHub Releases and Homebrew. Building with bricks comes next.
 
-[Unreleased]: https://github.com/mklab-se/kloss/compare/v0.0.2...HEAD
+[Unreleased]: https://github.com/mklab-se/kloss/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/mklab-se/kloss/compare/v0.0.2...v0.1.0
 [0.0.2]: https://github.com/mklab-se/kloss/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/mklab-se/kloss/releases/tag/v0.0.1
