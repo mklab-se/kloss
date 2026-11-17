@@ -369,6 +369,9 @@ return { fallMs, settleMs: Math.round(fallMs / 3) };
     horizontal field of view; `radius` is raised to at least 6, the spec's 12 units across)
   - `interface CameraController { attach(el: HTMLElement): void; update(dtMs: number): boolean; frame(box: Box3): void; home(): void; dispose(): void; autoFit: boolean; onAutoFitChange(fn: (on: boolean) => void): void; include(point: Vector3): void }`
     (`include` widens the next auto-fit to a drop's landing spot)
+  - `breathOffset(tMs: number): { yaw: number; pitch: number }` (radians; sum of two sines with
+    periods of about 8 s and 13 s, amplitude summing to at most 0.6 degrees) and
+    `breathWeight(msSinceInput: number): number` (smoothstep from 3000 to 4000 ms) in `gestures.ts`
   - `class CadController implements CameraController`
 
 - [ ] **Step 1: Write the failing tests:**
@@ -385,6 +388,10 @@ return { fallMs, settleMs: Math.round(fallMs / 3) };
   - `fitDistance(1, 50, 16 / 9)` equals `fitDistance(6, 50, 16 / 9)` (minimum framing);
     `fitDistance(20, 50, 16 / 9)` equals `1.1 * 20 / Math.sin(25 deg)`; a portrait aspect `0.5`
     gives a larger distance than `16 / 9` for the same radius
+  - `breathOffset(t)` (t in ms): `|yaw|` and `|pitch|` never exceed 0.6 degrees (in radians) over
+    t = 0..120000 sampled every 50 ms; `breathOffset(0)` is `{ yaw: 0, pitch: 0 }`; it is not
+    constant (values at 2000 and 4000 differ)
+  - `breathWeight(msSinceInput)`: 0 at 0 and below 3000, rises to 1 by 4000, never above 1
 
 - [ ] **Step 2: Run** `bun test test/web/gestures.test.ts`. Expected: FAIL.
 
@@ -398,6 +405,11 @@ return { fallMs, settleMs: Math.round(fallMs / 3) };
   clamped to stay above the floor), Shift-drag or right-drag pans; double-click eases the target to
   `pickPoint`; WASD/arrows pan along the floor, Q/E down/up; F frames `modelBounds()`, Home resets.
   No extra inertia. Touch: one finger rotates, two pan and pinch.
+  **Breathing** (spec "Breathing"): each frame, apply `breathOffset(now)` scaled by
+  `breathWeight(now - lastInput)` as a yaw/pitch offset around the target to the rendered camera
+  only (the stored position is untouched); skip it under `prefers-reduced-motion: reduce`. While
+  breathing, `update` returns true so the loop keeps rendering; pause the loop when
+  `document.hidden`.
   **Auto-fit** (spec "Auto-fit"): `autoFit` starts `true`; while on, each `update` eases the target
   to the center of `modelBounds()` widened by any `include`d points and the distance to
   `fitDistance` of its bounding sphere, keeping the current angles. Every user camera input sets it

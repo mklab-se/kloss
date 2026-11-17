@@ -193,7 +193,8 @@ The browser reconnects by itself and gets a fresh `model` when it does.
 ### Scene and look
 
 - Three.js `WebGLRenderer` with antialiasing, ACES filmic tone mapping and sRGB output. The scene
-  re-renders only when something changes (camera moves, animations), not continuously while idle.
+  re-renders only when something changes (camera moves, animations, the camera's breathing); while
+  breathing it renders at a modest rate, and when the tab is hidden it stops.
 - **Light from above:** a directional "sun" high above and slightly to one side, casting soft
   shadows (PCF soft shadows; the shadow camera follows the model's extent). It is helped by a
   hemisphere light (sky and ground tint) and a faint environment map so the plastic gets
@@ -263,6 +264,15 @@ How this works in the browser, and what must hold:
   auto-fit **off**; the camera then stays where the user puts it.
 - **F** frames the whole model and turns auto-fit back **on**. The overlay shows an "Auto-fit"
   switch that shows the state and toggles it when clicked.
+
+#### Breathing (added 2026-11-17)
+
+So the viewer visibly feels alive, the CAD camera sways ever so slightly while idle: about half a
+degree of rotation around the target, a cycle of roughly 8 seconds, made of two slow waves so it
+does not look mechanical. It is an offset on top of the camera's real position, so it never makes
+the view drift, and it works with auto-fit on or off. It fades out while the user is moving the
+camera and fades back in after about 3 seconds of stillness. It is off when the system asks for
+reduced motion (`prefers-reduced-motion`).
 
 The camera controller lives behind a small interface (`attach`, `update(dt)`, `dispose`) so walk mode
 can be added later as a second controller without touching the scene.
