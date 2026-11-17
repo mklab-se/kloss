@@ -6,6 +6,7 @@ import { Vector3 } from "three";
 import { SIZES } from "../core/format.ts";
 import { KLOSS_HEIGHT, PLUPP_HEIGHT } from "../core/types.ts";
 import { CadController } from "./camera.ts";
+import { createCompass } from "./compass.ts";
 import { DropQueue } from "./drops.ts";
 import { guardedFrame } from "./frame.ts";
 import { createOverlay } from "./overlay.ts";
@@ -28,6 +29,8 @@ camera.onAutoFitChange((on) => overlay.setAutoFit(on));
 overlay.onAutoFitClick(() => {
   camera.autoFit = !camera.autoFit;
 });
+
+const compass = createCompass(overlayRoot, () => camera.home());
 
 async function showFileName(): Promise<void> {
   try {
@@ -79,7 +82,10 @@ function step(now: number): void {
   last = now;
   const dropping = drops.update(now);
   const moving = camera.update(dt);
-  if (dropping || moving || view.needsRender) view.render();
+  if (dropping || moving || view.needsRender) {
+    view.render();
+    compass.update(view.camera);
+  }
 }
 requestAnimationFrame(
   guardedFrame(step, requestAnimationFrame, (e) => console.error("kloss: frame failed", e)),

@@ -110,7 +110,8 @@ Built for a Mac trackpad:
 | Home | Back to the starting view |
 | ? | Show the controls |
 
-The view keeps the whole model in sight (auto-fit) until you move the camera yourself. With a mouse,
+The compass in the bottom-left corner shows which way X (red) and Y (green) point, and takes you
+back to the start view when clicked. The view keeps the whole model in sight (auto-fit) until you move the camera yourself. With a mouse,
 the wheel (or + / -) zooms and right-drag pans.
 
 ### Coming later

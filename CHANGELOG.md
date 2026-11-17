@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A compass in the bottom-left corner of the viewer: red X and green Y arrows turn with the camera,
+  and a click goes back to the start view.
+
 ### Changed
 
 - **New `.kl` format:** `x,y|size|color`. A left-out size or color is the last one used, and a line

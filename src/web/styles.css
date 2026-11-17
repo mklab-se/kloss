@@ -201,3 +201,55 @@ body {
   white-space: normal;
   word-break: break-all;
 }
+
+.compass {
+  left: 16px;
+  bottom: 16px;
+  width: 84px;
+  height: 84px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.compass-ring {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.compass-arrow {
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.compass-hub {
+  fill: var(--ink);
+}
+
+.compass-arrow.axis-x,
+.compass-head.axis-x {
+  stroke: #d12a1f;
+  fill: #d12a1f;
+}
+
+.compass-arrow.axis-y,
+.compass-head.axis-y {
+  stroke: #2f8a4c;
+  fill: #2f8a4c;
+}
+
+.compass-label {
+  font-size: 13px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.compass-label.axis-x {
+  fill: #d12a1f;
+}
+
+.compass-label.axis-y {
+  fill: #2f8a4c;
+}

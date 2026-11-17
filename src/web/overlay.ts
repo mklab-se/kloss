@@ -24,7 +24,7 @@ const CONTROLS: [string, string][] = [
   ["Q / E", "Rotate left / right"],
   ["+ / -", "Zoom in / out"],
   ["F or F6", "Fit the model, auto-fit on"],
-  ["Home", "Back to the start view"],
+  ["Home, or click the compass", "Back to the start view"],
   ["?", "Show or hide this card"],
 ];
 
