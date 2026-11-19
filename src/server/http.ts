@@ -27,6 +27,8 @@ export interface ServerOptions {
   publicUrl?: string;
   /** How often idle sessions are swept (ms). */
   sweepMs?: number;
+  /** Where log lines go (MCP tool calls, the MCP switch, expired sessions); default console.log. */
+  log?: (line: string) => void;
 }
 
 type Req = Request & { params: Record<string, string> };
@@ -214,6 +216,7 @@ function sse(subscribe: (send: (event: string, data: unknown) => void) => () => 
 
 export function startServer(opts: ServerOptions): Server<undefined> {
   const { sessions, auth, mcp } = opts;
+  const log = opts.log ?? ((line: string) => console.log(line));
 
   const baseUrl = (req: Request) => {
     if (opts.publicUrl) return opts.publicUrl.replace(/\/+$/, "");
@@ -300,7 +303,7 @@ export function startServer(opts: ServerOptions): Server<undefined> {
   };
   const setMcp = (enabled: boolean, how: string) => {
     mcp.enabled = enabled;
-    console.log(`MCP endpoint turned ${enabled ? "on" : "off"} ${how}`);
+    log(`MCP endpoint turned ${enabled ? "on" : "off"} ${how}`);
   };
 
   // --- MCP and OAuth (only while MCP is on) ------------------------------------------------------
@@ -701,7 +704,25 @@ export function startServer(opts: ServerOptions): Server<undefined> {
         version: opts.version,
       };
       const messages = (Array.isArray(body) ? body : [body]) as RpcMessage[];
-      const answers = messages.map((m) => handleMcp(m, ctx)).filter((a) => a !== null);
+      const answers = messages
+        .map((m) => {
+          const answer = handleMcp(m, ctx);
+          // the host sees what agents do: who called which tool, for which session, and
+          // whether it was refused (and why)
+          if (m?.method === "tools/call") {
+            const args = (m.params?.arguments ?? {}) as Record<string, unknown>;
+            const code = typeof args.code === "string" ? ` ${args.code}` : "";
+            const result = answer?.result as
+              | { isError?: boolean; content?: { text?: string }[] }
+              | undefined;
+            const refused = result?.isError
+              ? ` (refused: ${(result.content?.[0]?.text ?? "").slice(0, 120)})`
+              : "";
+            log(`mcp: ${email || "-"} ${String(m.params?.name ?? "?")}${code}${refused}`);
+          }
+          return answer;
+        })
+        .filter((a) => a !== null);
       if (!answers.length) return new Response(null, { status: 202 });
       return Response.json(Array.isArray(body) ? answers : answers[0]);
     }),
@@ -801,7 +822,7 @@ export function startServer(opts: ServerOptions): Server<undefined> {
   });
 
   const sweep = setInterval(() => {
-    for (const code of sessions.sweep()) console.log(`session ${code} expired (idle)`);
+    for (const code of sessions.sweep()) log(`session ${code} expired (idle)`);
   }, opts.sweepMs ?? 60_000);
   sweep.unref?.();
   const stop = server.stop.bind(server);

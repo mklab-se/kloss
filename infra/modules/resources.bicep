@@ -11,6 +11,7 @@ param klossAdminPassword string
 @secure()
 param klossTokenSecret string
 param sessionIdle string
+param mcpOnStart bool
 
 var token = toLower(uniqueString(subscription().id, resourceGroup().id, environmentName))
 var appName = 'ca-kloss-${environmentName}'
@@ -117,6 +118,7 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
           }
           env: concat(secretEnv, [
             { name: 'KLOSS_SESSION_IDLE', value: sessionIdle }
+            { name: 'KLOSS_MCP', value: mcpOnStart ? '1' : '0' }
             { name: 'ASPNETCORE_HTTP_PORTS', value: '8080' } // only used by the placeholder image
           ])
         }

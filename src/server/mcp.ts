@@ -35,6 +35,29 @@ Example (a tower of three red 2x2 and a blue 2x4 next to it, the start of a wall
   .
   2,0|2x4|blue`;
 
+/** How to handle what people typically ask; kept in the server's MCP instructions. */
+const INSTRUCTIONS = `kloss builds models from klossar (bricks) that people watch live in a 3D viewer.
+A model lives in a session (a code like "otter-maple-42"); models are .kl text (see kloss_format).
+
+What people typically ask, and what to do:
+- "Visualize castle.kl": read the file yourself, then ask whether they want the live 3D view
+  (interactive, in their browser, where they can keep building) or just a picture of it now.
+  Live 3D view: create_session with the file's text and share the session's url as a link.
+  Picture: create_session with the file's text, then render_model, and show the picture (also
+  give its link, in case your interface does not show images).
+- "Open car.kl": they want the live 3D view: create_session with the file's text and share the
+  session's url as a link.
+- "Optimize the open model": "the open model" (or "the model") is the session you created or
+  used earlier in this conversation; use its code. Here: optimize_model, then say how many
+  klossar it saved.
+- "Save the model to house.kl": get_model and write its model text to that file, as it is.
+- "Add a blue 2x4 at 1,0": drop_klossar with the line "1,0|2x4|blue" (x,y is the kloss's corner).
+- "Undo that": undo_kloss.
+If a session is gone (sessions expire when idle, or when the server restarts), say so, and if you
+have the model's file, create_session with it again.
+
+${UNTRUSTED}`;
+
 const codeArg = {
   code: {
     type: "string",
@@ -139,7 +162,7 @@ const TOOLS = [
   {
     name: "get_model",
     title: "Read a session's model",
-    description: `The session's whole model as .kl text, how many klossar it has, its URL, and who has dropped klossar. ${UNTRUSTED}`,
+    description: `The session's whole model as .kl text, how many klossar it has, its URL, and who has dropped klossar. To save the model to a file, write the model text as it is. ${UNTRUSTED}`,
     inputSchema: {
       type: "object",
       properties: codeArg,
@@ -207,7 +230,7 @@ function callTool(name: string, args: Record<string, unknown>, ctx: McpContext):
     const s = ctx.sessions.get(code);
     if (!s)
       throw new McpToolError(
-        `No session "${code}" (it may have expired). Use create_session to start one.`,
+        `No session "${code}". It may have expired (sessions are removed after a while without use) or the server restarted. If you have the model's file, create_session with its text to open it again.`,
       );
     return s;
   };
@@ -261,7 +284,7 @@ function callTool(name: string, args: Record<string, unknown>, ctx: McpContext):
             { type: "image", data: Buffer.from(png).toString("base64"), mimeType: "image/png" },
             {
               type: "text",
-              text: `The ${view} view of session ${s.code}, ${s.model.klossar.length} klossar.`,
+              text: `The ${view} view of session ${s.code}, ${s.model.klossar.length} klossar. The picture is also at ${ctx.baseUrl}/api/sessions/${s.code}/render.png?view=${view} (opens in a browser where the user is logged in).`,
             },
           ],
         };
@@ -325,10 +348,7 @@ export function handleMcp(msg: RpcMessage, ctx: McpContext): Record<string, unkn
         protocolVersion: PROTOCOL_VERSIONS.includes(asked) ? asked : PROTOCOL_VERSIONS[0],
         capabilities: { tools: { listChanged: false } },
         serverInfo: { name: "kloss", title: "kloss", version: ctx.version },
-        instructions:
-          "kloss builds models from klossar (bricks) that people watch live in 3D. Start with " +
-          "create_session (or use a session code someone gives you), read kloss_format, then " +
-          `drop_klossar. Share the session URL so people can watch. ${UNTRUSTED}`,
+        instructions: INSTRUCTIONS,
       });
     }
     case "ping":

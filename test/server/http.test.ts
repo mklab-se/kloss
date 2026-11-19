@@ -525,3 +525,37 @@ test("viewers see the optimized model at once, with a note saying what changed",
     note: "Optimized: 4 → 1 klossar",
   });
 });
+
+test("every MCP tool call is logged with who made it and for which session", async () => {
+  const lines: string[] = [];
+  const sessions = new SessionStore({ idleMs: 60_000, maxSessions: 5 });
+  const auth = new Auth({ secret });
+  server = startServer({
+    sessions,
+    auth,
+    mcp: { enabled: true },
+    port: 0,
+    hostname: "127.0.0.1",
+    version: "1.2.3",
+    log: (line) => lines.push(line),
+  });
+  base = `http://127.0.0.1:${server.port}`;
+  const rpc = (name: string, args: Record<string, unknown>) =>
+    post(
+      "/mcp",
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "tools/call",
+        params: { name, arguments: args },
+      }),
+    );
+  const made = await rpc("create_session", {});
+  const text = ((await made.json()) as { result: { content: { text: string }[] } }).result
+    .content[0]?.text;
+  const code = JSON.parse(text ?? "{}").code;
+  await rpc("drop_klossar", { code, lines: ["0,0|2x2|red"] });
+  await rpc("drop_klossar", { code, lines: ["0,0|2x2|teal"] });
+  expect(lines.slice(0, 2)).toEqual([`mcp: - create_session`, `mcp: - drop_klossar ${code}`]);
+  expect(lines[2]).toStartWith(`mcp: - drop_klossar ${code} (refused: line 1`);
+});

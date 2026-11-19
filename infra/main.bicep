@@ -27,6 +27,9 @@ param klossTokenSecret string = ''
 @description('Remove sessions idle this long (like 2h or 30m).')
 param sessionIdle string = '2h'
 
+@description('Start with the MCP endpoint on, also after waking from sleep (azd env set KLOSS_MCP true). /admin still switches it at runtime.')
+param mcpOnStart bool = false
+
 var tags = { 'azd-env-name': environmentName, app: 'kloss' }
 var appName = 'ca-kloss-${environmentName}'
 // azd swaps this placeholder for the kloss image on deploy; it listens on 8080 (see resources)
@@ -57,6 +60,7 @@ module resources 'modules/resources.bicep' = {
     klossAdminPassword: klossAdminPassword
     klossTokenSecret: klossTokenSecret
     sessionIdle: sessionIdle
+    mcpOnStart: mcpOnStart
   }
 }
 

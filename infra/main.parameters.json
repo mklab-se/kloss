@@ -8,6 +8,7 @@
     "klossPassword": { "value": "${KLOSS_PASSWORD}" },
     "klossAdminPassword": { "value": "${KLOSS_ADMIN_PASSWORD}" },
     "klossTokenSecret": { "value": "${KLOSS_TOKEN_SECRET}" },
-    "sessionIdle": { "value": "${KLOSS_SESSION_IDLE=2h}" }
+    "sessionIdle": { "value": "${KLOSS_SESSION_IDLE=2h}" },
+    "mcpOnStart": { "value": "${KLOSS_MCP=false}" }
   }
 }

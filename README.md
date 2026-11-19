@@ -153,13 +153,24 @@ trace of it: `/mcp` and the OAuth endpoints answer like any unknown address.
 - At runtime: `/admin` has a switch. With login on, `/admin` needs `KLOSS_ADMIN_PASSWORD`
   (any e-mail plus that password); locally, with login off, it is open. Scripts can use
   `PUT /api/admin/mcp` with `{"enabled": true}` and an admin token from `POST /api/admin/token`.
-- The switch lives in memory: a restart starts with MCP off again.
+- The switch lives in memory: a restart starts with MCP off again, unless kloss started with
+  `--mcp` (on Azure: `azd env set KLOSS_MCP true` before `azd up`, so it also wakes from sleep on).
+- Every tool call is logged on the server (`mcp: ada@example.com drop_klossar otter-maple-42`), so
+  the host can show the room what agents are doing.
 
 Connect an agent, for example Claude Code:
 
 ```sh
 claude mcp add --transport http kloss https://…/mcp
 ```
+
+Then just talk to it: "Visualize castle.kl" (it asks: live 3D view or a picture?), "Open
+car.kl" (a link to the live view), "Optimize the open model", "Save the model to house.kl",
+"Add a blue 2x4 at 1,0", "Undo that". The server's instructions tell agents how to handle each.
+
+`bun scripts/agent-check.ts` plays exactly these requests through a real Claude Code against a
+local kloss and checks each result (it uses real tokens; `KLOSS_AGENT_MODEL=sonnet` to choose the
+model). Run it after changing the tools or their descriptions.
 
 ## Hosting on Azure
 
@@ -182,7 +193,8 @@ azd env get-value KLOSS_ADMIN_PASSWORD
 
 Before each deploy kloss prints the version going out and warns when it is not exactly a release;
 `/healthz` then shows it (`0.3.0+3f2a1c9-dirty`). When the app goes to sleep (about 5 idle
-minutes), every session is gone and MCP is off again; a live class keeps it awake.
+minutes), every session is gone and MCP is off again (unless `KLOSS_MCP` is set); a live class
+keeps it awake.
 
 ## The 3D view
 

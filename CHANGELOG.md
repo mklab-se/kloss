@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The MCP server's instructions cover what people typically ask ("visualize", "open", "optimize
+  the open model", "save", "add"), `render_model` also gives a link to the picture, and an
+  expired session says why and how to open it again.
+- `KLOSS_MCP` for Azure (`azd env set KLOSS_MCP true`): start with MCP on, also after waking up.
+- Every MCP tool call is logged on the server, with who made it and for which session.
+- `scripts/agent-check.ts`: plays the everyday requests through Claude Code and checks the results.
+
 - Two new sizes: **1x4** and **4x1**.
 - **Optimize:** `POST /api/sessions/<code>/optimize` (and the MCP tool `optimize_model`) merges
   klossar of the same color that lie side by side on the same level into bigger ones, where the
