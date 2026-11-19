@@ -2,12 +2,15 @@
  * The sessions kloss serves: many models at once, in memory only. A session that has not
  * changed and has no open viewer for `idleMs` is swept away.
  */
+import { Flock } from "./flock.ts";
 import { LimitError, Model } from "./model.ts";
 import { newSessionCode } from "./session-code.ts";
 
 export interface Session {
   code: string;
   model: Model;
+  /** The session's chickens (not part of the model). */
+  flock: Flock;
   createdAt: number;
   /** Open viewers (live event streams). */
   viewers: number;
@@ -44,6 +47,7 @@ export class SessionStore {
     const session: Session = {
       code,
       model,
+      flock: new Flock(model, { now: this.now }),
       createdAt: this.now(),
       viewers: 0,
       lastSeen: this.now(),

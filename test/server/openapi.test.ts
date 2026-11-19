@@ -34,6 +34,8 @@ describe("the OpenAPI description", () => {
         "GET /api/sessions/{code}/events",
         "POST /api/sessions/{code}/optimize",
         "GET /api/sessions/{code}/render.png",
+        "GET /api/sessions/{code}/chickens",
+        "POST /api/sessions/{code}/chickens",
       ].sort(),
     );
   });

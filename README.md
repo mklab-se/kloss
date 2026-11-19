@@ -144,6 +144,8 @@ All under `/api/sessions/<code>` (see `/docs` for every detail):
 | `GET …/model` | The model as JSON, with where each kloss landed and who dropped it. |
 | `GET …/model.kl` | The model as `.kl` text: how you save it. |
 | `PUT …/model` | Replaces the model with a `.kl` body; nothing changes if any line is invalid. |
+| `POST …/chickens` | Lets chickens loose: 1 to 10 per call (`{"count": 3}`), near `x`,`y` or the middle of the model. |
+| `GET …/chickens` | Where every chicken is, and who let it loose. |
 | `GET …/events` | Live updates as Server-Sent Events. |
 | `DELETE /api/sessions/<code>` | Removes the session for everyone. |
 | `GET /healthz` | Public: which kloss version you reach, and whether login is on. |
@@ -151,6 +153,22 @@ All under `/api/sessions/<code>` (see `/docs` for every detail):
 Errors come back as `{ "error": "..." }` (with `"line"` when a model line is wrong). Sessions
 live in the server's memory: one nobody has touched or watched for a couple of hours is removed,
 so download what you want to keep.
+
+## Chickens
+
+A model is more fun with someone living in it. Let a few chickens loose:
+
+```sh
+curl -X POST $S/chickens -H "$AUTH" -H 'content-type: application/json' -d '{"count": 3}'
+```
+
+They flutter down from the sky, each its own way, and from then on they live their own lives:
+they walk around, flutter up one kloss, hop down from any height and explore every corner of
+your model. Everyone watching sees them, and the viewer counts them. A session holds at most 50.
+
+Mind where you drop your klossar: a kloss that lands on a chicken is the end of that chicken,
+in a burst of feathers. Chickens are not part of the model, so they are never saved in `.kl`
+files and never change where a kloss lands.
 
 ## The 3D view
 

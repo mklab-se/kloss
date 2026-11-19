@@ -14,6 +14,8 @@ export interface About {
 
 export interface Overlay {
   setCount(n: number): void;
+  /** How many chickens roam the session (shown next to the kloss count when there are any). */
+  setChickens(n: number): void;
   setStatus(s: Status): void;
   setAutoFit(on: boolean): void;
   onAutoFitClick(fn: () => void): void;
@@ -126,13 +128,26 @@ export function createOverlay(root: HTMLElement, code: string): Overlay {
 
   root.append(info, fit, helpButton, empty, feed, help, goneCard);
 
+  let klossCount = 0;
+  let chickenCount = 0;
+  const showCount = () => {
+    const k = klossCount === 1 ? "1 kloss" : `${klossCount} klossar`;
+    const c = chickenCount === 1 ? "1 chicken" : `${chickenCount} chickens`;
+    count.textContent = chickenCount > 0 ? `${k} · ${c}` : k;
+  };
+
   let autoFitHandler = () => {};
   fit.addEventListener("click", () => autoFitHandler());
 
   const overlay: Overlay = {
     setCount(n) {
-      count.textContent = n === 1 ? "1 kloss" : `${n} klossar`;
+      klossCount = n;
+      showCount();
       empty.hidden = n > 0;
+    },
+    setChickens(n) {
+      chickenCount = n;
+      showCount();
     },
     setStatus(s) {
       dot.classList.toggle("live", s === "live");

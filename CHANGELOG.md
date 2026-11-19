@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Chickens:** `POST /api/sessions/<code>/chickens` lets chickens loose in a model. They flutter
+  down from the sky, then live their own lives: they walk around, flutter up one kloss, hop down
+  from any height and explore the model, and everyone watching sees the same chickens. A kloss
+  that lands on one is the end of it, in a burst of feathers. `GET …/chickens` lists them, and
+  the viewer counts them. Chickens are only in the REST API, on purpose: there is no MCP tool
+  for them, which shows that an MCP server offers a chosen part of an API.
 - Eight new sizes, the long ones: **1x6**, **6x1**, **2x6**, **6x2**, **1x8**, **8x1**, **2x8**
   and **8x2**. Optimizing uses them too, so long walls and floors shrink to far fewer klossar.
 - **Poof and grow:** when a model is optimized, everyone watching sees it happen. In each merged

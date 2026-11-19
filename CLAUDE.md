@@ -60,6 +60,8 @@ single-file release binaries.
   it reports which old klossar became each new one).
 - `src/server/`: `model.ts` (one session's model in memory; synchronous, so drops never interleave;
   emits `model`/`drop`/`deleted`), `sessions.ts` (the session store, idle sweep, limits),
+  `flock.ts` (chickens: simulated on the server per session, never part of the model, spawned
+  only through REST and on purpose never through MCP, which a test checks),
   `session-code.ts`, `auth.ts` (password check, HMAC-signed tokens, login slow-down, OAuth
   helpers: client ids and codes are signed, not stored), `mcp.ts` (hand-written JSON-RPC tools,
   like lykta), `pages.ts` (login and admin pages), `render.ts` (PNG
@@ -70,7 +72,8 @@ single-file release binaries.
 - `src/web/`: the viewer (`index.html`, Three.js) and the start page (`start.html`), bundled by
   Bun from HTML imports and embedded in the compiled binary. Animations keep their timing in
   pure, tested modules (`drop-timing.ts`, `poof-timing.ts`, `merge-timing.ts`); `merges.ts`
-  plays "poof and grow" after an optimize, all instanced so thousands of merges stay smooth.
+  plays "poof and grow" after an optimize, all instanced so thousands of merges stay smooth;
+  `chickens.ts` follows the server's chicken moves (`chicken-motion.ts`, `chicken-model.ts`).
 - `examples/castle.kl`: the example castle, generated level by level by `scripts/castle.ts` (every
   kloss is checked against the landing rule; edit the script, not the file). Run it locally with `bun src/cli.ts serve`
   (add `KLOSS_PASSWORD=...` to try login).

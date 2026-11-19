@@ -138,7 +138,10 @@ A flow that works, about 90 minutes:
    The agent opens the kloss login page; they log in as before. Then: "Visualize castle.kl",
    "Open car.kl", "Build a small house with a red roof", "Optimize the open model", "Save the
    model to house.kl".
-5. **Reflection (20 min).** The talking points below, with the server log on the projector.
+5. **Chickens (5 min).** Ask the agents to let some chickens loose in the room's session. They
+   can't: there is no MCP tool for it. Then show `POST …/chickens` in `/docs` and let everyone
+   spawn a few with `curl`. Watch them roam on the projector, and drop a kloss on one.
+6. **Reflection (20 min).** The talking points below, with the server log on the projector.
 
 Scripts can flip the switch too, with an admin token:
 
@@ -176,6 +179,10 @@ The power:
   open model" picked the right session from the conversation.
 - **Standard login.** OAuth with discovery and dynamic client registration: the agent found out
   how to log in by itself, and the participant only saw a familiar login page.
+- **An MCP server is a choice of tools, not the whole API.** Chickens exist only in the REST
+  API: the server's owner decided what agents get, and the MCP instructions never mention
+  chickens (a test keeps it that way). Most real MCP servers are like this, a curated slice of a
+  bigger API.
 
 The risks, all visible in this class:
 
@@ -192,6 +199,10 @@ The risks, all visible in this class:
   remote server with local file or shell access and the boundary gets thin.
 - **The server sees everything.** The log on the projector shows every call, from everyone.
   Whatever an agent sends, the server's owner can keep.
+- **Leaving it out of MCP is not a lock.** An agent that has a shell, has read `/docs`, and holds
+  the participant's token can call the chicken API with `curl` anyway. Try it: ask an agent
+  with shell access to "let three chickens loose using the API docs". What protects an API is
+  its own login and permissions, not which tools the MCP server happens to offer.
 - **Data can carry instructions.** A model is text, and so is a comment in a `.kl` file. Ask
   what happens if a model someone shares contains a line written to the agent rather than to
   kloss. (A good live experiment: put such a comment in a model, open it through the agent, and

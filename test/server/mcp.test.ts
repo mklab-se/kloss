@@ -195,3 +195,32 @@ describe("guidance for the everyday requests", () => {
     expect(r.text).toContain("create_session");
   });
 });
+
+describe("chickens are not part of MCP, on purpose", () => {
+  test("neither the instructions nor any tool mentions them", () => {
+    const ctx = context();
+    const text = JSON.stringify([
+      call(ctx, "initialize", { protocolVersion: "2025-06-18" }).result,
+      call(ctx, "tools/list").result,
+    ]).toLowerCase();
+    for (const word of ["chicken", "flock", "hen"])
+      expect(text).not.toMatch(new RegExp(`\\b${word}`));
+  });
+
+  test("there is no tool to spawn them, whatever an agent tries", () => {
+    const ctx = context();
+    for (const name of ["spawn_chickens", "spawn_chicken", "chickens"]) {
+      const r = call(ctx, "tools/call", { name, arguments: {} });
+      const failed = Boolean(r.error) || Boolean((r.result as { isError?: boolean })?.isError);
+      expect(failed).toBe(true);
+    }
+  });
+
+  test("an agent reading a model sees klossar only, even when chickens roam it", () => {
+    const ctx = context();
+    const s = ctx.sessions.create("0,0|2x2|red\n");
+    s.flock.spawn({ count: 3 });
+    const r = tool(ctx, "get_model", { code: s.code });
+    expect(r.text.toLowerCase()).not.toContain("chicken");
+  });
+});

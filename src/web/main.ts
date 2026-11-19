@@ -7,6 +7,7 @@ import { SIZES } from "../core/format.ts";
 import { KLOSS_HEIGHT, PLUPP_HEIGHT } from "../core/types.ts";
 import { apiFetch } from "./api.ts";
 import { CadController } from "./camera.ts";
+import { Chickens } from "./chickens.ts";
 import { createCompass } from "./compass.ts";
 import { DropQueue } from "./drops.ts";
 import { guardedFrame } from "./frame.ts";
@@ -23,6 +24,7 @@ const view = new KlossScene(canvas);
 const drops = new DropQueue(view);
 const poofs = new Poofs(view);
 const merges = new Merges(view);
+const chickens = new Chickens(view, (index) => drops.bottomOf(index));
 const camera = new CadController(view);
 camera.attach(canvas);
 
@@ -108,7 +110,31 @@ function start(): void {
       poofs.add(kloss, performance.now());
       if (kloss.by) overlay.activity(`${kloss.by} took back a ${kloss.color} ${kloss.size}`);
     },
+    onChickens(list) {
+      chickens.reset(list, performance.now());
+    },
+    onMoves(moves) {
+      chickens.apply(moves, performance.now());
+      const spawned = moves.filter((m) => m.kind === "spawn");
+      const by = spawned[0]?.by;
+      if (spawned.length && by) {
+        overlay.activity(
+          spawned.length === 1
+            ? `${by} let a chicken loose`
+            : `${by} let ${spawned.length} chickens loose`,
+        );
+      }
+    },
+    onChickenGone(e) {
+      const whose = e.by ? `${e.by}'s chicken` : "a chicken";
+      const note = e.dropper
+        ? `${e.dropper} dropped a kloss on ${whose}`
+        : `A kloss landed on ${whose}`;
+      // said when the feathers fly, not while the kloss is still on its way
+      chickens.doom(e.id, e.kloss, () => overlay.activity(note));
+    },
     onDeleted() {
+      chickens.clear();
       overlay.gone("This session was removed.");
     },
   });
@@ -130,7 +156,9 @@ function step(now: number): void {
   const falling = drops.update(now);
   const poofing = poofs.update(now);
   const merging = merges.update(now);
-  const dropping = falling || poofing || merging;
+  const clucking = chickens.update(now);
+  overlay.setChickens(chickens.count);
+  const dropping = falling || poofing || merging || clucking;
   const moving = camera.update(dt);
   if (dropping || moving || view.needsRender) {
     view.render();
@@ -142,4 +170,4 @@ requestAnimationFrame(
 );
 
 // For debugging in the browser console.
-Object.assign(window, { kloss: { view, camera, drops, merges } });
+Object.assign(window, { kloss: { view, camera, drops, merges, chickens } });

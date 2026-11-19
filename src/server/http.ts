@@ -9,6 +9,7 @@ import { MAX_BODY_BYTES } from "../core/types.ts";
 import viewer from "../web/index.html";
 import start from "../web/start.html";
 import { ACCESS_TTL, type Auth, REFRESH_TTL } from "./auth.ts";
+import { FlockFullError } from "./flock.ts";
 import { handleMcp, type RpcMessage } from "./mcp.ts";
 import { LimitError, type ModelEvent, UndoError } from "./model.ts";
 import { docsPage, openApi } from "./openapi.ts";
@@ -63,7 +64,9 @@ function errorResponse(e: unknown): Response {
     if (e.line !== undefined) body.line = e.line;
     return Response.json(body, { status: 400 });
   }
-  if (e instanceof UndoError) return Response.json({ error: e.message }, { status: 409 });
+  if (e instanceof UndoError || e instanceof FlockFullError) {
+    return Response.json({ error: e.message }, { status: 409 });
+  }
   if (e instanceof LimitError) {
     // a full model is the request's fault (413); a full server is temporary (503)
     const status = e.message.includes("sessions") ? 503 : 413;
@@ -508,6 +511,39 @@ export function startServer(opts: ServerOptions): Server<undefined> {
         return Response.json({ code: s.code, undone, klossar: s.model.klossar.length });
       }, true),
     },
+    "/api/sessions/:code/chickens": {
+      // chickens roam the model; on purpose only here in the REST API, never through MCP
+      GET: api((req) => {
+        const s = session(req.params.code);
+        const chickens = s.flock.list();
+        return Response.json({ code: s.code, chickens, count: chickens.length });
+      }),
+      POST: api(async (req, email) => {
+        const s = session(req.params.code);
+        const body = (await readBody(req)).trim();
+        let o: { count?: unknown; x?: unknown; y?: unknown } = {};
+        if (body) {
+          try {
+            o = JSON.parse(body) as typeof o;
+          } catch {
+            throw new FormatError('the body is not valid JSON (send {"count": 3}, or nothing)');
+          }
+          if (typeof o !== "object" || o === null) throw new FormatError("expected a JSON object");
+        }
+        const num = (v: unknown, name: string) => {
+          if (v === undefined) return undefined;
+          if (typeof v !== "number") throw new FormatError(`${name} must be a number`);
+          return v;
+        };
+        const spawned = s.flock.spawn({
+          count: num(o.count, "count"),
+          x: num(o.x, "x"),
+          y: num(o.y, "y"),
+          by: email || undefined,
+        });
+        return Response.json({ code: s.code, spawned, count: s.flock.size }, { status: 201 });
+      }, true),
+    },
     "/api/sessions/:code/render.png": {
       // a picture of the model, rendered on the server (so an agent can "see" it)
       GET: api((req) => {
@@ -563,7 +599,12 @@ export function startServer(opts: ServerOptions): Server<undefined> {
         const model = (klossar: unknown) => ({ code: s.code, klossar, mcp: mcp.enabled });
         return sse((send) => {
           send("model", model(s.model.klossar));
+          send("chickens", { chickens: s.flock.list() });
           const leave = sessions.watch(s.code);
+          const offFlock = s.flock.subscribe((e) => {
+            if (e.type === "moves") send("moves", { moves: e.moves });
+            else send("chicken-gone", e);
+          });
           const off = s.model.subscribe((e: ModelEvent) => {
             if (e.type === "drop") send("drop", e.kloss);
             else if (e.type === "undo") send("undo", { kloss: e.kloss, klossar: e.klossar });
@@ -573,6 +614,7 @@ export function startServer(opts: ServerOptions): Server<undefined> {
           });
           return () => {
             off();
+            offFlock();
             leave?.();
           };
         });

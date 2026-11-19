@@ -184,7 +184,7 @@ export function openApi(o: { baseUrl: string; version: string; auth: boolean }):
         tags: ["Models"],
         summary: "Optimize the model",
         description:
-          "Merges klossar of the same color that lie side by side on the same level into bigger ones (two 2x2 into a 2x4, four 1x1 in a row into a 4x1), where the model looks and stands exactly the same. Everyone watching sees the slimmer model.",
+          "Merges klossar of the same color that lie side by side on the same level into bigger ones (two 2x2 into a 2x4, four 1x1 in a row into a 4x1, two 4x2 into an 8x2), where the model looks and stands exactly the same. Everyone watching sees the slimmer model.",
         parameters: [
           {
             name: "preview",
@@ -235,13 +235,45 @@ export function openApi(o: { baseUrl: string; version: string; auth: boolean }):
         },
       },
     },
+    "/api/sessions/{code}/chickens": {
+      parameters: [codeParam],
+      get: {
+        tags: ["Chickens"],
+        summary: "List the chickens",
+        description:
+          "Every chicken in the session: where it stands (or is heading), and who spawned it.",
+        responses: {
+          200: { description: "The chickens.", content: json(ref("Chickens")) },
+          ...notLoggedIn,
+          ...noSession,
+        },
+      },
+      post: {
+        tags: ["Chickens"],
+        summary: "Spawn chickens",
+        description:
+          "Drops 1 to 10 chickens from the sky. They flutter down, each its own way, and land on top of whatever is below, near `x`,`y` or else near the middle of the model. From then on they live their own lives: they walk around, flutter up one kloss, hop down from any height and explore the model, and everyone watching sees them. A session holds at most 50. A kloss that lands on a chicken is the end of that chicken.",
+        requestBody: {
+          required: false,
+          content: json(ref("SpawnChickens")),
+        },
+        responses: {
+          201: { description: "Chickens on their way down.", content: json(ref("Spawned")) },
+          400: error("count, x or y is not valid."),
+          409: error("The session already holds 50 chickens."),
+          ...notLoggedIn,
+          ...changes,
+          ...noSession,
+        },
+      },
+    },
     "/api/sessions/{code}/events": {
       parameters: [codeParam],
       get: {
         tags: ["Models"],
         summary: "Live updates",
         description:
-          "Server-Sent Events: `model` (the whole model, on connect and when it is replaced or optimized), `drop` (one kloss), `undo` (a kloss taken back), `deleted` (the session is gone) and `ping` every 15 seconds.",
+          "Server-Sent Events: `model` (the whole model, on connect and when it is replaced or optimized), `drop` (one kloss), `undo` (a kloss taken back), `chickens` (every chicken, on connect), `moves` (chickens on the move), `chicken-gone` (a kloss landed on one), `deleted` (the session is gone) and `ping` every 15 seconds.",
         responses: {
           200: {
             description: "An event stream.",
@@ -296,6 +328,11 @@ export function openApi(o: { baseUrl: string; version: string; auth: boolean }):
         description: "A session is one model, shared by everyone who knows its code.",
       },
       { name: "Building", description: "Drop klossar, and take back the last one." },
+      {
+        name: "Chickens",
+        description:
+          "Chickens that roam your model on their own. Mind where you drop your klossar.",
+      },
       {
         name: "Models",
         description: "Read, replace, download, optimize, picture and follow a model.",
@@ -393,6 +430,41 @@ export function openApi(o: { baseUrl: string; version: string; auth: boolean }):
             klossar: { type: "integer" },
           },
         },
+        Chicken: {
+          type: "object",
+          properties: {
+            id: { type: "integer" },
+            x: { type: "integer" },
+            y: { type: "integer" },
+            level: { type: "integer", description: "The level it stands on (0 is the floor)." },
+            by: { type: "string", description: "Who spawned it (with login on)." },
+          },
+        },
+        Chickens: {
+          type: "object",
+          properties: {
+            code: { type: "string" },
+            chickens: { type: "array", items: ref("Chicken") },
+            count: { type: "integer" },
+          },
+        },
+        SpawnChickens: {
+          type: "object",
+          properties: {
+            count: { type: "integer", minimum: 1, maximum: 10, default: 1 },
+            x: { type: "integer", description: "Near here (default: the middle of the model)." },
+            y: { type: "integer" },
+          },
+          example: { count: 3 },
+        },
+        Spawned: {
+          type: "object",
+          properties: {
+            code: { type: "string" },
+            spawned: { type: "array", items: ref("Chicken") },
+            count: { type: "integer", description: "How many chickens the session has now." },
+          },
+        },
         Optimized: {
           type: "object",
           properties: {
@@ -454,6 +526,7 @@ function intro(auth: boolean, sizes: string[], colors: string[]): string {
     "**Visualize.** Open the link and watch every kloss fall into place as it is dropped, or ask for a picture with `GET .../render.png`.",
     "**Optimize.** `POST .../optimize` merges klossar into bigger ones wherever the model looks and stands exactly the same.",
     "**Keep it.** `GET .../model.kl` downloads the model as a file you can share, edit and load again.",
+    "**Add some life.** `POST .../chickens` drops chickens into your model. They roam it on their own, so mind where you drop your klossar.",
   ];
   return [
     "Build, visualize and optimize models made of klossar: virtual building blocks that snap together on an endless floor.",

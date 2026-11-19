@@ -40,6 +40,17 @@ export class DropQueue {
     this.waiting.push(k);
   }
 
+  /**
+   * Where kloss `index`'s underside is right now: high up while it waits or falls, and null when
+   * it is not (or no longer) falling.
+   */
+  bottomOf(index: number): number | null {
+    if (this.waiting.some((k) => k.index === index)) return Number.POSITIVE_INFINITY;
+    const f = this.active.find((a) => a.kloss.index === index);
+    if (!f || f.landed) return null;
+    return f.mesh.position.y;
+  }
+
   get pending(): number {
     return this.waiting.length + this.active.length;
   }

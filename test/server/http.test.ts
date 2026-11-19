@@ -50,8 +50,17 @@ async function token(email = "ada@example.com", password = "letmein"): Promise<s
   return ((await res.json()) as { access_token: string }).access_token;
 }
 
-/** Reads SSE events (skipping pings) until `count` have arrived. */
-async function readEvents(res: Response, count: number, onFirst?: () => Promise<unknown>) {
+/**
+ * Reads SSE events until `count` have arrived. Pings are always skipped, and so are the chicken
+ * events unless `chickens` is set (most tests are about the model).
+ */
+async function readEvents(
+  res: Response,
+  count: number,
+  onFirst?: () => Promise<unknown>,
+  chickens = false,
+) {
+  const skip = chickens ? ["ping"] : ["ping", "chickens", "moves", "chicken-gone"];
   const reader = res.body?.getReader();
   if (!reader) throw new Error("no body");
   const dec = new TextDecoder();
@@ -68,7 +77,7 @@ async function readEvents(res: Response, count: number, onFirst?: () => Promise<
       buf = buf.slice(i + 2);
       const event = /^event: (.*)$/m.exec(chunk)?.[1] ?? "";
       const data = /^data: (.*)$/m.exec(chunk)?.[1] ?? "null";
-      if (event !== "ping") out.push({ event, data: JSON.parse(data) });
+      if (!skip.includes(event)) out.push({ event, data: JSON.parse(data) });
       i = buf.indexOf("\n\n");
     }
     if (!triggered && out.length > 0 && onFirst) {
@@ -575,5 +584,69 @@ describe("API docs", () => {
     const html = await docs.text();
     expect(html).toContain("/openapi.json");
     expect(html.toLowerCase()).not.toContain("mcp");
+  });
+});
+
+describe("chickens (only in the REST API)", () => {
+  test("POST …/chickens drops chickens from the sky; GET lists them", async () => {
+    serve();
+    const code = await newSession({}, "0,0|2x2|gray\n");
+    const s = `/api/sessions/${code}`;
+    const one = await post(`${s}/chickens`, "");
+    expect(one.status).toBe(201);
+    expect(await one.json()).toMatchObject({ code, count: 1, spawned: [{ id: 1 }] });
+    const three = await post(`${s}/chickens`, JSON.stringify({ count: 3, x: 5, y: 5 }), {
+      "content-type": "application/json",
+    });
+    expect(three.status).toBe(201);
+    const body = (await three.json()) as { spawned: { x: number }[]; count: number };
+    expect(body.spawned).toHaveLength(3);
+    expect(body.count).toBe(4);
+    const list = (await (await req(`${s}/chickens`)).json()) as { chickens: unknown[] };
+    expect(list.chickens).toHaveLength(4);
+  });
+
+  test("a bad count is a 400, and a full session a 409", async () => {
+    serve();
+    const s = `/api/sessions/${await newSession()}`;
+    const json = { "content-type": "application/json" };
+    expect((await post(`${s}/chickens`, JSON.stringify({ count: 11 }), json)).status).toBe(400);
+    expect((await post(`${s}/chickens`, "{nope", json)).status).toBe(400);
+    for (let i = 0; i < 5; i++) {
+      expect((await post(`${s}/chickens`, JSON.stringify({ count: 10 }), json)).status).toBe(201);
+    }
+    const full = await post(`${s}/chickens`, "");
+    expect(full.status).toBe(409);
+    expect(await full.json()).toEqual({ error: "a session holds at most 50 chickens" });
+  });
+
+  test("with login on, spawning needs it, and the chicken remembers who spawned it", async () => {
+    serve({ password: "letmein" });
+    const t = await token();
+    const auth = { authorization: `Bearer ${t}` };
+    const s = `/api/sessions/${await newSession(auth)}`;
+    expect((await post(`${s}/chickens`, "")).status).toBe(401);
+    const res = await post(`${s}/chickens`, "", auth);
+    expect(await res.json()).toMatchObject({ spawned: [{ by: "ada@example.com" }] });
+  });
+
+  test("viewers get every chicken when they connect, then each move", async () => {
+    serve();
+    const code = await newSession();
+    const s = `/api/sessions/${code}`;
+    await post(`${s}/chickens`, "");
+    const events = await readEvents(
+      await req(`${s}/events`),
+      3,
+      () => post(`${s}/chickens`, ""),
+      true,
+    );
+    expect(events[0]?.event).toBe("model");
+    expect(events[1]?.event).toBe("chickens");
+    expect(events[1]?.data).toMatchObject({ chickens: [{ id: 1 }] });
+    expect(events[2]).toMatchObject({
+      event: "moves",
+      data: { moves: [{ id: 2, kind: "spawn" }] },
+    });
   });
 });
