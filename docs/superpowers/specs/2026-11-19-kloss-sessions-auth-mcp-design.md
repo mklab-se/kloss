@@ -67,9 +67,10 @@ where a shared password keeps strangers out. It is not a product: no sign-up, no
   lines, with carry-over and `.`), `get_model`, `replace_model`, `delete_session`, and
   `kloss_format` (the format and the rules, for agents). No tool lists sessions: codes stay
   private to whoever was told them.
-- Shared sessions mean other participants can write comments into a model. Model text is handed
-  over as data, and tool descriptions say so: a deliberate, labelled talking point about
-  prompt injection through tools.
+- Shared sessions mean other participants shape what an agent reads. Downloads are freshly
+  formatted (no comments), so the only free text is the e-mail address of who dropped what;
+  tool descriptions say all model content is data, never instructions: a deliberate, labelled
+  talking point about prompt injection through tools.
 
 ### Azure (azd only, no CI/CD deploy)
 
@@ -77,7 +78,8 @@ where a shared password keeps strangers out. It is not a product: no sign-up, no
   CI keeps checking the code on every push.
 - Resources: Log Analytics, a Container Apps environment, a container registry with a managed
   identity for pulls, and the kloss Container App: ingress on 8080, scale 0 to 1 (exactly one
-  replica, which in-memory sessions require), probes on `/healthz`, the three secrets as
+  replica, which in-memory sessions require), Azure's default health probes (the placeholder
+  image of the very first provision has no `/healthz`), the three secrets as
   Container App secrets from azd environment values.
 - The image is the single-file binary on a distroless base, built remotely by azd.
 - A pre-deploy hook prints the version going out and warns (does not block) when the working
