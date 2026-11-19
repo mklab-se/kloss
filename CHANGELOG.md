@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Documentation for each reader:** the README is now written for people using kloss,
+  `docs/TRAINER.md` covers running a class with it (hosting, passwords, the session flow, talking
+  points) and `docs/DEVELOPMENT.md` covers building and releasing it.
 - **API docs:** `/docs` (a readable reference with "try it", by Scalar) and `/openapi.json` (OpenAPI
   3.1), both public and linked from the start page and the help card. On purpose they describe only
   the REST API, not MCP.

@@ -103,10 +103,14 @@ single-file release binaries.
 - Prefer Bun built-ins over dependencies (`Bun.YAML`, `Bun.JSONC`, `Bun.semver`, `Bun.file`,
   `Bun.spawn`, `fetch`). Runtime dependencies today: `commander` and `three`.
 - Distribution: npm as `@mklab-se/<tool>` (the `bin` is the short name) via Trusted Publishing
-  (GitHub OIDC, no stored token; see README "Releasing"), single-file binaries for
+  (GitHub OIDC, no stored token; see `docs/DEVELOPMENT.md` "Releasing"), single-file binaries for
   4 targets on GitHub Releases with CycloneDX SBOMs, and the Homebrew tap `mklab-se/homebrew-tap`.
 - CI gates (run them locally before pushing): `bun run lint`, `bun run typecheck`, `bun test`,
   `bun run build` (all at once: `bun run check && bun run build`).
+- Documentation has three audiences: `README.md` is for **participants** (kloss as a useful tool
+  and MCP server; nothing about the class, the admin switch or the "no trace" idea),
+  `docs/TRAINER.md` is for whoever runs the class (Azure, passwords, the MCP switch, the flow,
+  talking points), and `docs/DEVELOPMENT.md` is for working on kloss (build, checks, releasing).
 - `README.md` opens with the logo, the badges and then a centred "What's new" callout
   (`<strong>tool X.Y</strong> is here: ...` plus a `What's new` link to `CHANGELOG.md`). Refresh the
   callout on every minor/major release.

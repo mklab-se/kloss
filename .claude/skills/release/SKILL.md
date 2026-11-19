@@ -43,7 +43,7 @@ $ARGUMENTS must be one of: `major`, `minor`, `patch`. If empty or invalid, stop 
   `## [Unreleased]` above it, and update the compare links at the bottom
 - **README.md "What's new" callout**: on every minor or major release, update the version in
   `<strong>...</strong>` and the one-line summary; keep the `What's new` link
-- **README.md, CLAUDE.md, INSTALL.md**: review for accuracy
+- **README.md, docs/TRAINER.md, docs/DEVELOPMENT.md, CLAUDE.md, INSTALL.md**: review for accuracy
 
 ### 6. Commit, push, and tag
 

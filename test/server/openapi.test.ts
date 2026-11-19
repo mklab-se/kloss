@@ -38,6 +38,14 @@ describe("the OpenAPI description", () => {
     );
   });
 
+  test("the intro sells building, visualizing and optimizing, then shows how to start", () => {
+    const d = spec(true).info.description;
+    for (const word of ["Build", "visualize", "Optimize", "/api/token", "```", "x,y|size|color"])
+      expect(d).toContain(word);
+    // without login there is nothing to log in to
+    expect(spec(false).info.description).not.toContain("/api/token");
+  });
+
   test("on purpose, says nothing about MCP, OAuth or the admin API", () => {
     const text = JSON.stringify(spec()).toLowerCase();
     for (const word of ["mcp", "oauth", "admin", "model context"]) expect(text).not.toContain(word);

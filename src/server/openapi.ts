@@ -278,9 +278,7 @@ export function openApi(o: { baseUrl: string; version: string; auth: boolean }):
     info: {
       title: "kloss",
       version: o.version,
-      description:
-        "Build models from klossar (bricks) and watch them fall into place, live in 3D. A model lives in a session; models are written in the .kl format, one kloss per line: `x,y|size|color`." +
-        (o.auth ? " Log in first with /api/token." : ""),
+      description: intro(o.auth, sizes, colors),
     },
     servers: [{ url: o.baseUrl }],
     tags: [
@@ -441,4 +439,44 @@ export function docsPage(): Response {
   </body>
 </html>`;
   return new Response(html, { headers: { "content-type": "text/html; charset=utf-8" } });
+}
+
+/** The intro at the top of /docs: what the API is for, how to start, and the model format. */
+function intro(auth: boolean, sizes: string[], colors: string[]): string {
+  const steps = [
+    ...(auth
+      ? [
+          "**Log in.** `POST /api/token` with your e-mail address and the password you were given. Send the token as `Authorization: Bearer <token>` on every call.",
+        ]
+      : []),
+    "**Start a session.** `POST /api/sessions` gives you a code like `otter-maple-42` and a link to the live 3D view. Send a `.kl` file in the body to start from a model you already have.",
+    "**Build.** `POST .../klossar` drops one kloss at a time; `DELETE .../klossar/last` takes it back.",
+    "**Visualize.** Open the link and watch every kloss fall into place as it is dropped, or ask for a picture with `GET .../render.png`.",
+    "**Optimize.** `POST .../optimize` merges klossar into bigger ones wherever the model looks and stands exactly the same.",
+    "**Keep it.** `GET .../model.kl` downloads the model as a file you can share, edit and load again.",
+  ];
+  return [
+    "Build, visualize and optimize models made of klossar: virtual building blocks that snap together on an endless floor.",
+    "",
+    "Describe a model one kloss at a time, from a script, a terminal or your own app, and watch it come together live in 3D in any browser: every kloss falls from the sky and lands exactly where the rules say it must. Share the session with others and build together, render a picture of the result from any side, and let kloss slim the model down to fewer, bigger klossar without changing how it looks.",
+    "",
+    "## Getting started",
+    "",
+    ...steps.map((s, i) => `${i + 1}. ${s}`),
+    "",
+    "## The .kl format",
+    "",
+    "A model is plain text, read from the top down. Each line drops one kloss, written `x,y|size|color`; it lands on the first thing it touches, the floor or another kloss, so you never write a height. Leave out the size or the color to reuse the last one, and a line with just `.` drops the same kloss again, right on top.",
+    "",
+    "```text",
+    "# a gray base, a tower on it, and the start of a red wall",
+    "1,1|4x2|gray",
+    "1,1|2x2",
+    "5,1",
+    ".",
+    "1,3|2x4|red",
+    "```",
+    "",
+    `Sizes: ${sizes.map((s) => `\`${s}\``).join(", ")}. Colors: ${colors.join(", ")}. \`#\` starts a comment.`,
+  ].join("\n");
 }
