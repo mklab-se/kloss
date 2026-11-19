@@ -1,0 +1,12 @@
+node_modules
+dist
+.git
+.github
+.azure
+.superpowers
+.claude
+docs
+media
+test
+examples
+*.kl

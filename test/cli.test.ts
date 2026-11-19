@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { buildProgram } from "../src/cli.ts";
 import { generateCompletion } from "../src/commands/completion.ts";
-import { buildVersion, parseDuration } from "../src/commands/serve.ts";
+import { buildVersion, buildVersionAsync, parseDuration } from "../src/commands/serve.ts";
 import { TOOL, VERSION } from "../src/meta.ts";
 
 const env = { ...process.env, KLOSS_NO_UPDATE_CHECK: "1", NO_COLOR: "1" };
@@ -133,4 +133,11 @@ describe("serve helpers", () => {
     expect(buildVersion({ KLOSS_BUILD: VERSION })).toBe(VERSION);
     expect(buildVersion({ KLOSS_BUILD: "3f2a1c9" })).toBe(`${VERSION}+3f2a1c9`);
   });
+});
+
+test("buildVersion reads the build from a file too (the container image carries one)", async () => {
+  const file = `${process.env.TMPDIR ?? "/tmp"}/kloss-build-${Date.now()}`;
+  await Bun.write(file, "3f2a1c9-dirty\n");
+  expect(await buildVersionAsync({ KLOSS_BUILD_FILE: file })).toBe(`${VERSION}+3f2a1c9-dirty`);
+  expect(await buildVersionAsync({ KLOSS_BUILD_FILE: "/no/such/file" })).toBe(VERSION);
 });

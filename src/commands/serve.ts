@@ -34,6 +34,19 @@ export function buildVersion(env: Record<string, string | undefined> = process.e
   return build && build !== VERSION ? `${VERSION}+${build}` : VERSION;
 }
 
+/** buildVersion, also reading the build from KLOSS_BUILD_FILE (the container image has one). */
+export async function buildVersionAsync(
+  env: Record<string, string | undefined> = process.env,
+): Promise<string> {
+  if (env.KLOSS_BUILD || !env.KLOSS_BUILD_FILE) return buildVersion(env);
+  try {
+    const build = (await Bun.file(env.KLOSS_BUILD_FILE).text()).trim();
+    return buildVersion({ KLOSS_BUILD: build });
+  } catch {
+    return VERSION;
+  }
+}
+
 function openBrowser(url: string): void {
   const cmd =
     process.platform === "darwin"
@@ -59,7 +72,7 @@ export async function runServe(
     idleMs: parseDuration(opts.sessionIdle),
     maxSessions: opts.maxSessions,
   });
-  const version = buildVersion(env);
+  const version = await buildVersionAsync(env);
   const server = startServer({
     sessions,
     auth,

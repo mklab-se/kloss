@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+# `azd up` creates (or updates) everything and deploys the working tree; `azd down` removes it.
+# There is deliberately no CI/CD deploy: kloss is hosted only around a class.
+name: kloss
+services:
+  kloss:
+    project: .
+    language: ts
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      remoteBuild: true
+    hooks:
+      prepackage:
+        shell: sh
+        run: hooks/prepackage.sh
+hooks:
+  preprovision:
+    shell: sh
+    run: hooks/preprovision.sh

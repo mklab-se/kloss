@@ -8,3 +8,7 @@ dist/
 # Local model served by .claude/launch.json
 /scratch.kl
 /model.kl
+
+# azd
+.azure/
+build-info.txt

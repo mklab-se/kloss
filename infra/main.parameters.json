@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": { "value": "${AZURE_ENV_NAME}" },
+    "location": { "value": "${AZURE_LOCATION=swedencentral}" },
+    "klossExists": { "value": "${SERVICE_KLOSS_RESOURCE_EXISTS=false}" },
+    "klossPassword": { "value": "${KLOSS_PASSWORD}" },
+    "klossAdminPassword": { "value": "${KLOSS_ADMIN_PASSWORD}" },
+    "klossTokenSecret": { "value": "${KLOSS_TOKEN_SECRET}" },
+    "sessionIdle": { "value": "${KLOSS_SESSION_IDLE=2h}" }
+  }
+}
