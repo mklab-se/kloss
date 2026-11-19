@@ -10,6 +10,7 @@ import { CadController } from "./camera.ts";
 import { createCompass } from "./compass.ts";
 import { DropQueue } from "./drops.ts";
 import { guardedFrame } from "./frame.ts";
+import { Merges } from "./merges.ts";
 import { createOverlay } from "./overlay.ts";
 import { Poofs } from "./poofs.ts";
 import { KlossScene } from "./scene.ts";
@@ -21,6 +22,7 @@ if (!canvas) throw new Error("missing #view canvas");
 const view = new KlossScene(canvas);
 const drops = new DropQueue(view);
 const poofs = new Poofs(view);
+const merges = new Merges(view);
 const camera = new CadController(view);
 camera.attach(canvas);
 
@@ -69,16 +71,22 @@ async function begin(): Promise<void> {
 
 function start(): void {
   connect(code, {
-    onModel(klossar, mcp, note) {
+    onModel(klossar, mcp, note, merged) {
       overlay.setMcp(mcp);
       if (note) overlay.activity(note);
       drops.clear();
       camera.clearIncluded();
-      view.setModel(klossar);
+      // after an optimize, "poof and grow" shows what merged (not on the first model shown)
+      if (merged?.length && !firstModel) merges.start(klossar, merged, performance.now());
+      else {
+        merges.clear();
+        view.setModel(klossar);
+      }
       if (firstModel) camera.frame(view.modelBounds(), true);
       firstModel = false;
     },
     onDrop(kloss) {
+      merges.finish();
       drops.push(kloss);
       if (kloss.by) overlay.activity(`${kloss.by} dropped a ${kloss.color} ${kloss.size}`);
       // Auto-fit frames the landing spot right away, so the kloss lands in view.
@@ -93,6 +101,7 @@ function start(): void {
     },
     onUndo(kloss, klossar) {
       // the model without it, at once; a ghost of it goes "poof" where it was
+      merges.clear();
       drops.clear();
       camera.clearIncluded();
       view.setModel(klossar);
@@ -110,15 +119,18 @@ let last = performance.now();
 let shownCount = -1;
 function step(now: number): void {
   // The count follows what has landed, so it ticks up as klossar arrive.
-  if (view.count !== shownCount) {
-    shownCount = view.count;
+  // while an optimize plays, the klossar still to poof are counted until they go
+  const count = view.count + merges.pendingPoofs(now);
+  if (count !== shownCount) {
+    shownCount = count;
     overlay.setCount(shownCount);
   }
   const dt = Math.min(100, now - last);
   last = now;
   const falling = drops.update(now);
   const poofing = poofs.update(now);
-  const dropping = falling || poofing;
+  const merging = merges.update(now);
+  const dropping = falling || poofing || merging;
   const moving = camera.update(dt);
   if (dropping || moving || view.needsRender) {
     view.render();
@@ -130,4 +142,4 @@ requestAnimationFrame(
 );
 
 // For debugging in the browser console.
-Object.assign(window, { kloss: { view, camera, drops } });
+Object.assign(window, { kloss: { view, camera, drops, merges } });

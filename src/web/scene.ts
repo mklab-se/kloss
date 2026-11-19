@@ -203,13 +203,23 @@ export class KlossScene {
     this.klossCount += 1;
   }
 
-  setModel(klossar: readonly PlacedKloss[]): void {
+  /**
+   * Shows a whole model. Klossar whose index is in `hidden` count (bounds, count) but are not
+   * drawn yet: an animation draws them until it hands them over with `reveal`.
+   */
+  setModel(klossar: readonly PlacedKloss[], hidden?: ReadonlySet<number>): void {
     this.instances.clear();
     this.resetBounds();
     for (const k of klossar) {
-      this.instances.add(k);
+      if (!hidden?.has(k.index)) this.instances.add(k);
       this.grow(k);
     }
+    this.requestRender();
+  }
+
+  /** Draws a kloss that setModel was told to hide. */
+  reveal(k: PlacedKloss): void {
+    this.instances.add(k);
     this.requestRender();
   }
 

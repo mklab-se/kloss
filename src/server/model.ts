@@ -8,10 +8,16 @@ import { optimize } from "../core/optimize.ts";
 import { type KlossInput, MAX_KLOSSAR, type PlacedKloss } from "../core/types.ts";
 
 export type ModelEvent =
-  | { type: "model"; klossar: PlacedKloss[]; note?: string }
+  | { type: "model"; klossar: PlacedKloss[]; note?: string; merged?: Merged[] }
   | { type: "drop"; kloss: PlacedKloss }
   | { type: "undo"; kloss: PlacedKloss; klossar: PlacedKloss[] }
   | { type: "deleted" };
+
+/** After an optimize: the new kloss at `index` was made from these old klossar (the first stays). */
+export interface Merged {
+  index: number;
+  from: PlacedKloss[];
+}
 
 export class LimitError extends Error {
   constructor(message: string) {
@@ -132,11 +138,16 @@ export class Model {
     const r = optimize(inputs);
     const applied = !preview && r.merges > 0;
     if (applied) {
+      const old = this.placed;
       this.placed = placeAll(r.klossar);
       this.heights = heightsOf(this.placed);
       this.lastChange = this.now();
       const note = `Optimized: ${r.before} → ${r.after} klossar`;
-      this.emit({ type: "model", klossar: this.placed, note });
+      const merged: Merged[] = [];
+      r.from.forEach((from, index) => {
+        if (from.length > 1) merged.push({ index, from: from.map((i) => old[i] as PlacedKloss) });
+      });
+      this.emit({ type: "model", klossar: this.placed, note, merged });
     }
     return { before: r.before, after: r.after, merges: r.merges, applied };
   }

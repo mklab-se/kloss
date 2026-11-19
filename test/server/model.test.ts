@@ -160,6 +160,26 @@ describe("optimize", () => {
     expect(events.map((e) => e.type)).toEqual(["model"]);
   });
 
+  test("tells viewers which old klossar became each new one, so they can animate it", () => {
+    const m = Model.from("0,0|1x1|red\n1,0\n9,9|2x2|blue\n");
+    const events: ModelEvent[] = [];
+    m.subscribe((e) => events.push(e));
+    m.optimize();
+    const e = events[0];
+    if (e?.type !== "model") throw new Error("expected a model event");
+    // only the klossar that changed; the first in `from` is the one that stays
+    expect(e.merged).toEqual([
+      {
+        index: 0,
+        from: [
+          { index: 0, size: "1x1", color: "red", x: 0, y: 0, level: 0 },
+          { index: 1, size: "1x1", color: "red", x: 1, y: 0, level: 0 },
+        ],
+      },
+    ]);
+    expect(e.klossar.map((k) => k.size)).toEqual(["2x1", "2x2"]);
+  });
+
   test("a preview reports what it would do and changes nothing", () => {
     const m = Model.from("0,0|2x2|red\n2,0|2x2|red\n");
     const events: ModelEvent[] = [];

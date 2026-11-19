@@ -74,6 +74,42 @@ describe("optimize", () => {
   });
 
   test("an empty model stays empty", () => {
-    expect(optimize([])).toEqual({ klossar: [], before: 0, after: 0, merges: 0 });
+    expect(optimize([])).toEqual({ klossar: [], before: 0, after: 0, merges: 0, from: [] });
+  });
+
+  test("says which klossar each new one was made from", () => {
+    const r = run("0,0|1x1|red\n1,0\n2,0\n3,0\n9,9|2x2|blue\n");
+    expect(r.klossar.map((k) => k.size)).toEqual(["4x1", "2x2"]);
+    expect(r.from.map((f) => [...f].sort())).toEqual([[0, 1, 2, 3], [4]]);
+    // every old kloss ends up in exactly one new one
+    const all = r.from.flat().sort((a, b) => a - b);
+    expect(all).toEqual([0, 1, 2, 3, 4]);
+  });
+
+  test("the old kloss at the new one's corner is listed first (it is the one that stays)", () => {
+    const r = run("2,0|2x2|red\n0,0|2x2|red\n");
+    expect(r.klossar).toHaveLength(1);
+    expect(r.from[0]?.[0]).toBe(1);
+  });
+
+  test("a big model of 10,000 klossar optimizes fully, in well under a second", () => {
+    const text = Array.from(
+      { length: 10_000 },
+      (_, i) => `${i % 100},${Math.floor(i / 100)}|1x1|red`,
+    );
+    const before = parseModel(text.join("\n"));
+    const t = performance.now();
+    const r = optimize(before);
+    const ms = performance.now() - t;
+    expect(voxels(r.klossar)).toEqual(voxels(before));
+    expect(r.after).toBe(1_250); // the best there is: all 8-cell klossar
+    expect(ms).toBeLessThan(1_000);
+  });
+
+  test("a tall model stands the same after optimizing (the castle)", async () => {
+    const before = parseModel(await Bun.file("examples/castle.kl").text());
+    const r = optimize(before);
+    expect(voxels(r.klossar)).toEqual(voxels(before));
+    expect(r.after).toBeLessThan(before.length);
   });
 });

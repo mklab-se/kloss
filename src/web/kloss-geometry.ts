@@ -96,13 +96,21 @@ function buildSlab(w: number, d: number): BufferGeometry {
   return standUp(g);
 }
 
-export function buildKlossGeometry(size: Size): BufferGeometry {
+/** A kloss without its pluppar (the body and the slab with the sockets). */
+export function buildKlossBodyGeometry(size: Size): BufferGeometry {
   const { w, d } = SIZES[size];
   const height = KLOSS_HEIGHT - BODY_BOTTOM;
   const body = new RoundedBoxGeometry(w - 2 * INSET, height, d - 2 * INSET, 2, BODY_RADIUS);
   body.translate(w / 2, BODY_BOTTOM + height / 2, d / 2);
-  const parts: BufferGeometry[] = [body.toNonIndexed(), buildSlab(w, d).toNonIndexed()];
-  const plupp = buildPluppGeometry();
+  const merged = mergeGeometries([body.toNonIndexed(), buildSlab(w, d).toNonIndexed()]);
+  if (!merged) throw new Error(`could not build the ${size} kloss body`);
+  return merged;
+}
+
+export function buildKlossGeometry(size: Size): BufferGeometry {
+  const { w, d } = SIZES[size];
+  const parts: BufferGeometry[] = [buildKlossBodyGeometry(size)];
+  const plupp = pluppGeometry();
   for (let i = 0; i < w; i++) {
     for (let k = 0; k < d; k++) {
       parts.push(plupp.clone().translate(i + 0.5, KLOSS_HEIGHT, k + 0.5));
@@ -116,6 +124,8 @@ export function buildKlossGeometry(size: Size): BufferGeometry {
 }
 
 const cache = new Map<Size, BufferGeometry>();
+const bodyCache = new Map<Size, BufferGeometry>();
+let plupp: BufferGeometry | undefined;
 
 export function klossGeometry(size: Size): BufferGeometry {
   let g = cache.get(size);
@@ -124,4 +134,20 @@ export function klossGeometry(size: Size): BufferGeometry {
     cache.set(size, g);
   }
   return g;
+}
+
+/** Shared: a kloss's body without pluppar, its corner at the origin. */
+export function klossBodyGeometry(size: Size): BufferGeometry {
+  let g = bodyCache.get(size);
+  if (!g) {
+    g = buildKlossBodyGeometry(size);
+    bodyCache.set(size, g);
+  }
+  return g;
+}
+
+/** Shared: one plupp, standing on the origin. */
+export function pluppGeometry(): BufferGeometry {
+  plupp ??= buildPluppGeometry();
+  return plupp;
 }

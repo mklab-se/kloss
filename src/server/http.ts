@@ -567,7 +567,8 @@ export function startServer(opts: ServerOptions): Server<undefined> {
           const off = s.model.subscribe((e: ModelEvent) => {
             if (e.type === "drop") send("drop", e.kloss);
             else if (e.type === "undo") send("undo", { kloss: e.kloss, klossar: e.klossar });
-            else if (e.type === "model") send("model", { ...model(e.klossar), note: e.note });
+            else if (e.type === "model")
+              send("model", { ...model(e.klossar), note: e.note, merged: e.merged });
             else send("deleted", { code: s.code });
           });
           return () => {

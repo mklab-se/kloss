@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Poof and grow:** when a model is optimized, everyone watching sees it happen. In each merged
+  group the extra klossar go up in smoke, the one that stays grows into their place, and then its
+  new pluppar rise out of the top. It ripples upward level by level, the kloss counter ticks down
+  as they go, and it stays smooth with thousands of klossar.
+
+### Changed
+
+- **Optimizing is far faster:** 10,000 klossar now take milliseconds instead of many seconds
+  (the castle: 6 ms instead of 0.6 s), so a big optimize never holds up the server. The result
+  is just as good: the castle still optimizes to 1,974 klossar.
+
 ## [0.3.0] - 2026-11-19
 
 ### Added

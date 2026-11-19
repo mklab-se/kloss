@@ -139,7 +139,7 @@ All under `/api/sessions/<code>` (see `/docs` for every detail):
 | `POST …/klossar` | Drops one kloss: a line (`2,0\|2x4\|blue`, `5,1`, `.`) or JSON (`{"size":"2x4","color":"blue","x":2,"y":0}`). Returns where it landed (`level`). |
 | `DELETE …/klossar/last` | Takes back your most recent kloss (it vanishes with a poof for everyone watching). |
 | `GET …/render.png` | A picture of the model: `?view=iso` (default), `top`, `front` or `side`, and `size` (64 to 2048 pixels). |
-| `POST …/optimize` | Merges klossar of the same color side by side on the same level into bigger ones, where the model looks and stands exactly the same. `?preview=true` only tells you how many it would save. |
+| `POST …/optimize` | Merges klossar of the same color side by side on the same level into bigger ones, where the model looks and stands exactly the same. Everyone watching sees it happen: the extra klossar go up in smoke and the ones that stay grow into their place. `?preview=true` only tells you how many it would save. |
 | `GET …/model` | The model as JSON, with where each kloss landed and who dropped it. |
 | `GET …/model.kl` | The model as `.kl` text: how you save it. |
 | `PUT …/model` | Replaces the model with a `.kl` body; nothing changes if any line is invalid. |

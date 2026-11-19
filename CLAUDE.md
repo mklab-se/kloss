@@ -55,7 +55,9 @@ single-file release binaries.
 - `src/core/` (shared by server and browser; no DOM or server APIs): `types.ts` (data model and
   dimensions), `format.ts` (the `.kl` line format `x,y|size|color` with carry-over and `.` repeats; parse, compact aligned writing; sizes, palette), `landing.ts` (height map:
   a kloss lands on the highest thing under its footprint), `optimize.ts` (merges klossar where
-  every landing stays the same; each merge is checked by replaying the model).
+  every landing stays the same; each merge is checked against the columns of the klossar dropped
+  between its two parts, never by replaying the whole model, so 10,000 klossar take milliseconds;
+  it reports which old klossar became each new one).
 - `src/server/`: `model.ts` (one session's model in memory; synchronous, so drops never interleave;
   emits `model`/`drop`/`deleted`), `sessions.ts` (the session store, idle sweep, limits),
   `session-code.ts`, `auth.ts` (password check, HMAC-signed tokens, login slow-down, OAuth
@@ -66,7 +68,9 @@ single-file release binaries.
   mentions MCP, OAuth or admin, and a test checks that), `http.ts` (all routes; `mcpOnly` routes 404
   while MCP is off).
 - `src/web/`: the viewer (`index.html`, Three.js) and the start page (`start.html`), bundled by
-  Bun from HTML imports and embedded in the compiled binary.
+  Bun from HTML imports and embedded in the compiled binary. Animations keep their timing in
+  pure, tested modules (`drop-timing.ts`, `poof-timing.ts`, `merge-timing.ts`); `merges.ts`
+  plays "poof and grow" after an optimize, all instanced so thousands of merges stay smooth.
 - `examples/castle.kl`: the example castle, generated level by level by `scripts/castle.ts` (every
   kloss is checked against the landing rule; edit the script, not the file). Run it locally with `bun src/cli.ts serve`
   (add `KLOSS_PASSWORD=...` to try login).

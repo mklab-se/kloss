@@ -523,6 +523,7 @@ test("viewers see the optimized model at once, with a note saying what changed",
   expect(events[1]?.data).toMatchObject({
     klossar: [{ size: "4x1" }],
     note: "Optimized: 4 → 1 klossar",
+    merged: [{ index: 0, from: [{ x: 0 }, { x: 1 }, { x: 2 }, { x: 3 }] }],
   });
 });
 
