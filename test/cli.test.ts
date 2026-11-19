@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import { buildProgram } from "../src/cli.ts";
 import { generateCompletion } from "../src/commands/completion.ts";
 import { buildVersion, buildVersionAsync, parseDuration } from "../src/commands/serve.ts";
@@ -56,14 +56,21 @@ describe("completion", () => {
 describe("serve", () => {
   const procs: ReturnType<typeof Bun.spawn>[] = [];
 
-  afterAll(() => {
-    for (const p of procs) p.kill();
+  // each test's server stops when the test ends, so none can answer for another
+  afterEach(() => {
+    for (const p of procs.splice(0)) p.kill();
   });
 
+  /**
+   * Starts `kloss serve` on a port the system picks (so two servers never meet) and returns the
+   * address it prints. Only the KLOSS_ settings given here apply, never the caller's own.
+   */
   async function start(extra: string[] = [], extraEnv: Record<string, string> = {}) {
-    const port = 19_000 + Math.floor(Math.random() * 1000);
-    const proc = Bun.spawn(["bun", "src/cli.ts", "serve", "--port", String(port), ...extra], {
-      env: { ...env, ...extraEnv },
+    const clean = Object.fromEntries(
+      Object.entries(env).filter(([k]) => !k.startsWith("KLOSS_") || k === "KLOSS_NO_UPDATE_CHECK"),
+    );
+    const proc = Bun.spawn(["bun", "src/cli.ts", "serve", "--port", "0", ...extra], {
+      env: { ...clean, ...extraEnv },
       stdout: "pipe",
       stderr: "pipe",
     });
@@ -75,7 +82,9 @@ describe("serve", () => {
       if (done) break;
       out += new TextDecoder().decode(value);
     }
-    return { base: `http://127.0.0.1:${port}`, out };
+    const base = /serving at (http:\/\/\S+)/.exec(out)?.[1];
+    if (!base) throw new Error(`kloss serve did not say where it serves:\n${out}`);
+    return { base, out };
   }
 
   test("--help lists the options and how login works", async () => {
