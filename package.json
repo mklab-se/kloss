@@ -1,6 +1,6 @@
 {
   "name": "@mklab-se/kloss",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Build models from virtual bricks, by hand or through MCP",
   "keywords": [
     "bricks",
