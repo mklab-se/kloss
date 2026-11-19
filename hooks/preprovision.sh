@@ -5,13 +5,15 @@ set -e
 random() {
   head -c 48 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c "$1"
 }
+WORDS="amber brave cedar comet daring falcon garden harbor island lantern maple meadow orchid pebble planet puffin raven river rocket spruce tower tulip valley walrus willow zebra"
+pick() {
+  n=$(printf '%s\n' $WORDS | wc -l | tr -d ' ')
+  i=$(( $(od -An -N2 -tu2 /dev/urandom | tr -d ' ') % n + 1 ))
+  printf '%s\n' $WORDS | sed -n "${i}p"
+}
 words() {
   # an easy-to-type class password: three short words and a number
-  set -- amber brave cedar comet daring falcon garden harbor island lantern maple meadow orchid \
-    pebble planet puffin raven river rocket spruce tower tulip valley walrus willow zebra
-  n=$#
-  pick() { i=$(( $(od -An -N2 -tu2 /dev/urandom) % n + 1 )); eval "printf %s \"\${$i}\""; }
-  printf '%s-%s-%s-%s' "$(pick)" "$(pick)" "$(pick)" "$(( $(od -An -N1 -tu1 /dev/urandom) % 90 + 10 ))"
+  printf '%s-%s-%s-%s' "$(pick)" "$(pick)" "$(pick)" "$(( $(od -An -N1 -tu1 /dev/urandom | tr -d ' ') % 90 + 10 ))"
 }
 # azd exits non-zero for a key it does not have (and prints the error on stdout, so never test the text)
 have() { azd env get-value "$1" >/dev/null 2>&1; }
