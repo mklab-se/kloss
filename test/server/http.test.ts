@@ -559,3 +559,20 @@ test("every MCP tool call is logged with who made it and for which session", asy
   expect(lines.slice(0, 2)).toEqual([`mcp: - create_session`, `mcp: - drop_klossar ${code}`]);
   expect(lines[2]).toStartWith(`mcp: - drop_klossar ${code} (refused: line 1`);
 });
+
+describe("API docs", () => {
+  test("/openapi.json and /docs are public, and never mention MCP, even while it is on", async () => {
+    serve({ password: "letmein", mcp: true });
+    const spec = await req("/openapi.json");
+    expect(spec.status).toBe(200);
+    const body = await spec.text();
+    expect(JSON.parse(body).servers).toEqual([{ url: base }]);
+    expect(body.toLowerCase()).not.toContain("mcp");
+    const docs = await req("/docs");
+    expect(docs.status).toBe(200);
+    expect(docs.headers.get("content-type")).toContain("text/html");
+    const html = await docs.text();
+    expect(html).toContain("/openapi.json");
+    expect(html.toLowerCase()).not.toContain("mcp");
+  });
+});

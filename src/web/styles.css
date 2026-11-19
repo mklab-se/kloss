@@ -432,3 +432,10 @@ body {
   user-select: all;
   cursor: text;
 }
+
+.help-link {
+  display: block;
+  color: #2f80dc;
+  font-weight: 600;
+  text-decoration: none;
+}

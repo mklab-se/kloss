@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **API docs:** `/docs` (a readable reference with "try it", by Scalar) and `/openapi.json` (OpenAPI
+  3.1), both public and linked from the start page and the help card. On purpose they describe only
+  the REST API, not MCP.
+
 - The MCP server's instructions cover what people typically ask ("visualize", "open", "optimize
   the open model", "save", "add"), `render_model` also gives a link to the picture, and an
   expired session says why and how to open it again.

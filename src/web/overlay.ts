@@ -116,6 +116,7 @@ export function createOverlay(root: HTMLElement, code: string): Overlay {
     helpSteps,
     el("div", "help-title", "This session"),
     el("div", "help-about", sessionUrl),
+    Object.assign(el("a", "help-about help-link", "API docs"), { href: "/docs", target: "_blank" }),
     about,
     mcpLine,
   );

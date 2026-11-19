@@ -100,6 +100,10 @@ removed (`--session-idle 30m`), and kloss holds at most 100 at once (`--max-sess
 
 ## REST API
 
+The API documents itself: `/docs` is a readable reference with a "try it" button for each call
+(Scalar), and `/openapi.json` is the OpenAPI 3.1 description (agents can read it too). Both are
+public; the calls still need login. On purpose they describe only the REST API: nothing about MCP.
+
 All under `/api/sessions/<code>`:
 
 | Request | Does |

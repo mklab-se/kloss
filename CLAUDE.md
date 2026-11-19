@@ -61,7 +61,9 @@ single-file release binaries.
   `session-code.ts`, `auth.ts` (password check, HMAC-signed tokens, login slow-down, OAuth
   helpers: client ids and codes are signed, not stored), `mcp.ts` (hand-written JSON-RPC tools,
   like lykta), `pages.ts` (login and admin pages), `render.ts` (PNG
-  pictures without a browser: unit cells, painter's order, own PNG encoder), `http.ts` (all routes; `mcpOnly` routes 404
+  pictures without a browser: unit cells, painter's order, own PNG encoder), `openapi.ts`
+  (`/openapi.json` and the `/docs` page with Scalar from a CDN, pinned; on purpose it never
+  mentions MCP, OAuth or admin, and a test checks that), `http.ts` (all routes; `mcpOnly` routes 404
   while MCP is off).
 - `src/web/`: the viewer (`index.html`, Three.js) and the start page (`start.html`), bundled by
   Bun from HTML imports and embedded in the compiled binary.
