@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Sessions:** many models at once, in memory, each with a short readable code (`otter-maple-42`).
+  `POST /api/sessions` (optionally with a `.kl` body), and per session `klossar`, `model`,
+  `model.kl` (download), `events` and `DELETE`. A start page to join by code or start a session;
+  the viewer is at `/s/<code>`. Idle sessions expire (`--session-idle`, default 2h).
+- **Login** (`KLOSS_PASSWORD`): any e-mail address plus a shared password. A login page and cookie
+  for browsers, `POST /api/token` for curl, and OAuth with PKCE for MCP clients. With login on,
+  the viewer shows who dropped what.
+- **MCP endpoint** at `/mcp`, with tools to create sessions, drop klossar and read, replace and
+  delete models. Off by default; turned on at runtime from `/admin` (`KLOSS_ADMIN_PASSWORD`), and
+  no trace of it while off.
+- `/healthz` reports the version (with the build when it is not a release) and whether login is on.
+- **Azure hosting** with `azd up` and `azd down`: a Container App that sleeps when unused.
+
+### Changed
+
+- `kloss serve` no longer takes a model file, and the old `/api/klossar` and `/api/model` routes
+  moved under `/api/sessions/<code>`. Save a model by downloading `model.kl`.
+
+### Fixed
+
+- A `.` repeat no longer copies the previous kloss's index.
+
 ## [0.2.1] - 2026-11-18
 
 ### Changed

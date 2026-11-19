@@ -15,10 +15,14 @@ enough joint. The **floor** is endless and covered in pluppar. A kloss not held 
 another kloss falls, tumbles and is removed (this comes with removal; with drop-only building every
 kloss is always supported).
 
-Status: `kloss serve` serves a live 3D view (Three.js) and a REST API that drops klossar into a
-`.kl` model file (`.kl` for kloss, and a nod to Kristofer Liljeblad and MKLab). Design: `docs/superpowers/specs/2026-11-17-kloss-viewer-design.md`; plan:
-`docs/superpowers/plans/2026-11-17-kloss-viewer.md`. Walk mode, removal and MCP come later. On npm the package is
-`@mklab-se/kloss` (bin `kloss`).
+Status (0.3): `kloss serve` serves many **sessions** (models in memory, each with a short code
+like `otter-maple-42`), a live 3D viewer at `/s/<code>`, a REST API, optional **login** (any
+e-mail + `KLOSS_PASSWORD`; kloss is its own small OAuth server), and an **MCP endpoint** that the
+host turns on at runtime from `/admin` and that leaves no trace while off. Hosted on Azure with
+`azd up` / `azd down` only (no deploy pipeline). The point is teaching what MCP is: participants
+use the REST API first, then the host turns MCP on. Designs: `docs/superpowers/specs/`
+(`2026-11-17-kloss-viewer-design.md`, `2026-11-19-kloss-sessions-auth-mcp-design.md`). On npm the
+package is `@mklab-se/kloss` (bin `kloss`).
 
 
 ## Template lineage
@@ -51,14 +55,20 @@ single-file release binaries.
 - `src/core/` (shared by server and browser; no DOM or server APIs): `types.ts` (data model and
   dimensions), `format.ts` (the `.kl` line format `x,y|size|color` with carry-over and `.` repeats; parse, compact aligned writing; sizes, palette), `landing.ts` (height map:
   a kloss lands on the highest thing under its footprint).
-- `src/server/`: `model-store.ts` (in-memory model persisted to the file through one write queue;
-  emits `model`/`drop` events), `http.ts` (Bun.serve routes: `/` web app via HTML import, `/api/*`,
-  `/events` SSE, `/healthz`; refuses changes from foreign `Origin`s).
-- `src/web/`: the browser app (Three.js), bundled by Bun from `index.html` and embedded in the
-  compiled binary.
+- `src/server/`: `model.ts` (one session's model in memory; synchronous, so drops never interleave;
+  emits `model`/`drop`/`deleted`), `sessions.ts` (the session store, idle sweep, limits),
+  `session-code.ts`, `auth.ts` (password check, HMAC-signed tokens, login slow-down, OAuth
+  helpers: client ids and codes are signed, not stored), `mcp.ts` (hand-written JSON-RPC tools,
+  like lykta), `pages.ts` (login and admin pages), `http.ts` (all routes; `mcpOnly` routes 404
+  while MCP is off).
+- `src/web/`: the viewer (`index.html`, Three.js) and the start page (`start.html`), bundled by
+  Bun from HTML imports and embedded in the compiled binary.
 - `examples/castle.kl`: the example castle, generated level by level by `scripts/castle.ts` (every
-  kloss is checked against the landing rule; edit the script, not the file). `.claude/launch.json` serves a git-ignored
-  `scratch.kl` (`bun --hot src/cli.ts serve`).
+  kloss is checked against the landing rule; edit the script, not the file). Run it locally with `bun src/cli.ts serve`
+  (add `KLOSS_PASSWORD=...` to try login).
+- Azure: `azure.yaml`, `infra/` (Bicep: Container App scale 0..1, registry, pull identity),
+  `hooks/preprovision.sh` (generates secrets into the azd env), `hooks/prepackage.sh` (version
+  check, writes `build-info.txt` for `/healthz`), `Dockerfile`.
 - `src/meta.ts`: tool name, package name, version and description (version and description are
   read from `package.json`, the single source of truth).
 - `src/banner.ts`: block-letter banner rendered at runtime from the tool name via a built-in 5-row

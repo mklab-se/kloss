@@ -4,7 +4,7 @@
     {
       "name": "kloss",
       "runtimeExecutable": "bun",
-      "runtimeArgs": ["--hot", "src/cli.ts", "serve", "scratch.kl", "--port", "4321"],
+      "runtimeArgs": ["--hot", "src/cli.ts", "serve", "--port", "4321"],
       "port": 4321
     }
   ]
