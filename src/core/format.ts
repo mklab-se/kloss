@@ -14,6 +14,14 @@ export const SIZES: Record<Size, { w: number; d: number }> = {
   "2x2": { w: 2, d: 2 },
   "2x4": { w: 2, d: 4 },
   "4x2": { w: 4, d: 2 },
+  "1x6": { w: 1, d: 6 },
+  "6x1": { w: 6, d: 1 },
+  "2x6": { w: 2, d: 6 },
+  "6x2": { w: 6, d: 2 },
+  "1x8": { w: 1, d: 8 },
+  "8x1": { w: 8, d: 1 },
+  "2x8": { w: 2, d: 8 },
+  "8x2": { w: 8, d: 2 },
 };
 
 /** kloss's own palette (not anyone else's color table). */

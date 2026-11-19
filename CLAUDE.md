@@ -9,7 +9,7 @@ floor, by hand or through an MCP server. It will be used to demonstrate the powe
 potential risks of MCP servers.
 
 Vocabulary (our own, not Lego's): a brick is a **kloss** (plural klossar); sizes 1x1, 1x2, 2x1,
-1x4, 4x1, 2x2, 2x4 and 4x2 are counted in **pluppar**; a **plupp** is a plus-shaped connector bump on top, one third of a
+1x4, 4x1, 2x2, 2x4, 4x2, 1x6, 6x1, 2x6, 6x2, 1x8, 8x1, 2x8 and 8x2 are counted in **pluppar**; a **plupp** is a plus-shaped connector bump on top, one third of a
 brick's height, fitting a plus-shaped **socket** underneath. One plupp in a socket is a strong
 enough joint. The **floor** is endless and covered in pluppar. A kloss not held by the floor or
 another kloss falls, tumbles and is removed (this comes with removal; with drop-only building every

@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Eight new sizes, the long ones: **1x6**, **6x1**, **2x6**, **6x2**, **1x8**, **8x1**, **2x8**
+  and **8x2**. Optimizing uses them too, so long walls and floors shrink to far fewer klossar.
 - **Poof and grow:** when a model is optimized, everyone watching sees it happen. In each merged
   group the extra klossar go up in smoke, the one that stays grows into their place, and then its
   new pluppar rise out of the top. It ripples upward level by level, the kloss counter ticks down

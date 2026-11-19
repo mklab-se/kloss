@@ -36,6 +36,13 @@ describe("optimize", () => {
     expect(sizes(run("0,0|1x1|red\n1,0\n0,1\n1,1\n"))).toEqual(["2x2"]);
   });
 
+  test("long rows become the long sizes: 8x1, 6x2, 2x8", () => {
+    expect(sizes(run("0,0|4x1|red\n4,0|4x1|red\n"))).toEqual(["8x1"]);
+    expect(sizes(run("0,0|4x2|red\n4,0|2x2|red\n"))).toEqual(["6x2"]);
+    expect(sizes(run("0,0|1x1|red\n" + "1,0\n2,0\n3,0\n4,0\n5,0\n6,0\n7,0\n"))).toEqual(["8x1"]);
+    expect(sizes(run("0,0|2x4|blue\n0,4|2x4|blue\n"))).toEqual(["2x8"]);
+  });
+
   test("two 1x4 long side to long side become one 2x4", () => {
     expect(sizes(run("0,0|1x4|blue\n1,0|1x4|blue\n"))).toEqual(["2x4"]);
   });
@@ -102,7 +109,9 @@ describe("optimize", () => {
     const r = optimize(before);
     const ms = performance.now() - t;
     expect(voxels(r.klossar)).toEqual(voxels(before));
-    expect(r.after).toBe(1_250); // the best there is: all 8-cell klossar
+    // at least 625 (all 8x2); a 100-wide floor does not split evenly into 8-long klossar
+    expect(r.after).toBeGreaterThanOrEqual(625);
+    expect(r.after).toBeLessThanOrEqual(650);
     expect(ms).toBeLessThan(1_000);
   });
 

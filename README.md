@@ -112,7 +112,8 @@ The second line drops a gray 2x2, the third a gray 2x2 at 5,1, and the dot anoth
 it. A color alone keeps the size (`5,1|blue`). Spaces around `,` and `|` are fine.
 
 - **Size** `<w>x<d>`: `w` pluppar along x, `d` along y: `1x1`, `1x2`, `2x1`, `1x4`, `4x1`,
-  `2x2`, `2x4`, `4x2` (a `4x2` is a `2x4` turned).
+  `2x2`, `2x4`, `4x2`, and the long ones `1x6`, `6x1`, `2x6`, `6x2`, `1x8`, `8x1`, `2x8`, `8x2`
+  (a `4x2` is a `2x4` turned).
 - **Color**: white, gray, black, red, orange, yellow, lime, green, blue, azure, purple, pink,
   brown, tan.
 - **Position** `x,y`: the corner with the smallest coordinates, whole numbers from -10000 to

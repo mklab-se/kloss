@@ -201,20 +201,41 @@ describe("palette and sizes", () => {
     for (const hex of Object.values(PALETTE)) expect(hex).toMatch(/^#[0-9a-f]{6}$/);
   });
 
-  test("eight sizes, w along x and d along y", () => {
-    expect(Object.keys(SIZES).sort()).toEqual([
-      "1x1",
-      "1x2",
-      "1x4",
-      "2x1",
-      "2x2",
-      "2x4",
-      "4x1",
-      "4x2",
-    ]);
+  test("sixteen sizes, each both ways round, w along x and d along y", () => {
+    expect(Object.keys(SIZES).sort()).toEqual(
+      [
+        "1x1",
+        "1x2",
+        "2x1",
+        "1x4",
+        "4x1",
+        "2x2",
+        "2x4",
+        "4x2",
+        "1x6",
+        "6x1",
+        "2x6",
+        "6x2",
+        "1x8",
+        "8x1",
+        "2x8",
+        "8x2",
+      ].sort(),
+    );
     expect(SIZES["4x2"]).toEqual({ w: 4, d: 2 });
     expect(SIZES["1x4"]).toEqual({ w: 1, d: 4 });
-    expect(SIZES["4x1"]).toEqual({ w: 4, d: 1 });
+    expect(SIZES["8x2"]).toEqual({ w: 8, d: 2 });
+    expect(SIZES["1x6"]).toEqual({ w: 1, d: 6 });
+    // every size has its turned twin
+    for (const { w, d } of Object.values(SIZES))
+      expect(Object.hasOwn(SIZES, `${d}x${w}`)).toBe(true);
+  });
+
+  test("the long klossar read and write like any other", () => {
+    const text = "0,0|8x2|red\n0,2|6x1|blue\n9,0|1x8\n";
+    const m = parseModel(text);
+    expect(m.map((k) => k.size)).toEqual(["8x2", "6x1", "1x8"]);
+    expect(parseModel(formatModel(m))).toEqual(m);
   });
 });
 

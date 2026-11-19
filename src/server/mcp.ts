@@ -22,7 +22,7 @@ plupp (stud) of overlap is enough to hold. Height is never written; it comes fro
 
 A line is  x,y|size|color
 - x,y: the corner of the kloss with the smallest coordinates, whole numbers -10000..10000.
-- size: <w>x<d>, w pluppar along x and d along y: 1x1, 1x2, 2x1, 1x4, 4x1, 2x2, 2x4, 4x2 (a 4x2 is a turned 2x4).
+- size: <w>x<d>, w pluppar along x and d along y: 1x1, 1x2, 2x1, 1x4, 4x1, 2x2, 2x4, 4x2, 1x6, 6x1, 2x6, 6x2, 1x8, 8x1, 2x8, 8x2 (a 4x2 is a turned 2x4). The long ones (6 and 8) make walls, floors and roofs with far fewer klossar.
 - color: white, gray, black, red, orange, yellow, lime, green, blue, azure, purple, pink, brown, tan.
 - Leave out the size or the color and the last one used is used again ("5,1", "5,1|2x2",
   "5,1|red"); a line with just "." repeats the drop before it. The first kloss in a session
