@@ -3,6 +3,7 @@
  * switch, who just dropped what, a hint while the model is empty, the help card (toggled with
  * `?`), and a message when the session is gone.
  */
+import { firstSteps, type Step } from "./first-steps.ts";
 import type { Status } from "./stream.ts";
 
 export interface About {
@@ -54,8 +55,16 @@ function el<K extends keyof HTMLElementTagNameMap>(
 
 export function createOverlay(root: HTMLElement, code: string): Overlay {
   const sessionUrl = `${location.origin}/s/${code}`;
-  const curlFor = (auth: boolean) =>
-    `curl -X POST ${location.origin}/api/sessions/${code}/klossar${auth ? ' -H "Authorization: Bearer $TOKEN"' : ""} -d '2,0|2x4|blue'`;
+  /** Fills a box with numbered steps: a short label, then its command to copy. */
+  const showSteps = (box: HTMLElement, steps: Step[]) => {
+    box.replaceChildren(
+      ...steps.flatMap((s, i) => [
+        el("div", "step-label", steps.length > 1 ? `${i + 1}. ${s.label}` : s.label),
+        el("code", "step-code", s.command),
+      ]),
+    );
+  };
+  const initial = firstSteps({ origin: location.origin, code, auth: false });
 
   const info = el("div", "hud hud-info");
   const dot = el("span", "dot");
@@ -85,8 +94,9 @@ export function createOverlay(root: HTMLElement, code: string): Overlay {
   helpButton.title = "Controls";
 
   const empty = el("div", "empty");
-  const emptyCode = el("code", "empty-code", curlFor(false));
-  empty.append(el("div", "empty-title", "Drop your first kloss"), emptyCode);
+  const emptySteps = el("div", "steps");
+  showSteps(emptySteps, initial);
+  empty.append(el("div", "empty-title", "Build from your terminal"), emptySteps);
 
   const feed = el("div", "activity");
 
@@ -95,14 +105,15 @@ export function createOverlay(root: HTMLElement, code: string): Overlay {
   help.append(el("div", "help-title", "Controls"));
   const table = el("dl", "help-table");
   for (const [key, what] of CONTROLS) table.append(el("dt", "", key), el("dd", "", what));
-  const helpCode = el("code", "help-code", curlFor(false));
+  const helpSteps = el("div", "steps");
+  showSteps(helpSteps, initial);
   const about = el("div", "help-about", "");
   const mcpLine = el("div", "help-about", "");
   mcpLine.hidden = true;
   help.append(
     table,
-    el("div", "help-title", "Drop a kloss"),
-    helpCode,
+    el("div", "help-title", "Build from your terminal"),
+    helpSteps,
     el("div", "help-title", "This session"),
     el("div", "help-about", sessionUrl),
     about,
@@ -141,8 +152,9 @@ export function createOverlay(root: HTMLElement, code: string): Overlay {
     },
     setAbout(a) {
       about.textContent = `kloss ${a.version}${a.email ? ` · logged in as ${a.email}` : ""}`;
-      emptyCode.textContent = curlFor(a.auth);
-      helpCode.textContent = curlFor(a.auth);
+      const steps = firstSteps({ origin: location.origin, code, auth: a.auth, email: a.email });
+      showSteps(emptySteps, steps);
+      showSteps(helpSteps, steps);
     },
     setMcp(on) {
       mcpLine.hidden = !on;

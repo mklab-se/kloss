@@ -141,3 +141,22 @@ test("buildVersion reads the build from a file too (the container image carries 
   expect(await buildVersionAsync({ KLOSS_BUILD_FILE: file })).toBe(`${VERSION}+3f2a1c9-dirty`);
   expect(await buildVersionAsync({ KLOSS_BUILD_FILE: "/no/such/file" })).toBe(VERSION);
 });
+
+test("with login on, kloss serve prints the token step too", async () => {
+  const port = 19_000 + Math.floor(Math.random() * 1000);
+  const proc = Bun.spawn(["bun", "src/cli.ts", "serve", "--port", String(port)], {
+    env: { ...env, KLOSS_PASSWORD: "class" },
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const reader = (proc.stdout as ReadableStream<Uint8Array>).getReader();
+  let out = "";
+  while (!out.includes("/klossar")) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    out += new TextDecoder().decode(value);
+  }
+  proc.kill();
+  expect(out).toContain("/api/token");
+  expect(out).toContain("Authorization: Bearer $TOKEN");
+});

@@ -90,9 +90,19 @@ export async function runServe(
       `login ${auth.enabled ? "on" : "off"}, admin ${auth.enabled && !auth.adminEnabled ? "off" : "on"}, MCP ${opts.mcp ? "on" : "off"}, sessions expire after ${opts.sessionIdle} idle`,
     ),
   );
-  console.log(dim("Start a session and drop a kloss:"));
-  console.log(`  curl -X POST ${url}/api/sessions`);
-  console.log(`  curl -X POST ${url}/api/sessions/<code>/klossar -d '2,0|2x4|blue'`);
+  if (auth.enabled) {
+    const bearer = ' -H "Authorization: Bearer $TOKEN"';
+    console.log(dim("Log in, start a session and drop a kloss:"));
+    console.log(
+      `  TOKEN=$(curl -s -X POST ${url}/api/token -H 'content-type: application/json' -d '{"email":"you@example.com","password":"PASSWORD"}' | jq -r .access_token)`,
+    );
+    console.log(`  curl -X POST ${url}/api/sessions${bearer}`);
+    console.log(`  curl -X POST ${url}/api/sessions/<code>/klossar${bearer} -d '2,0|2x4|blue'`);
+  } else {
+    console.log(dim("Start a session and drop a kloss:"));
+    console.log(`  curl -X POST ${url}/api/sessions`);
+    console.log(`  curl -X POST ${url}/api/sessions/<code>/klossar -d '2,0|2x4|blue'`);
+  }
   if (opts.open) openBrowser(url);
   return server;
 }

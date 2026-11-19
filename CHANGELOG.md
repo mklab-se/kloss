@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The viewer's first instructions (and its help card, and `kloss serve`'s output) show both steps
+  when login is on: get a token, with your own e-mail address filled in, then drop a kloss.
+
 - **Undo:** `DELETE /api/sessions/<code>/klossar/last` (and the MCP tool `undo_kloss`) takes back the
   most recent kloss; with login on, only your own. In the viewer it vanishes with a poof.
 

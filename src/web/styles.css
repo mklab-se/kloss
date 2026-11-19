@@ -386,3 +386,49 @@ body {
   color: #2f80dc;
   font-weight: 600;
 }
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  text-align: left;
+}
+
+.empty .steps {
+  width: min(640px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.step-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-top: 6px;
+}
+
+.step-label:first-child {
+  margin-top: 0;
+}
+
+.step-code {
+  display: block;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(31, 35, 40, 0.86);
+  color: #f2f0ea;
+  font:
+    12px ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: all;
+  cursor: text;
+}
