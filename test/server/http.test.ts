@@ -434,3 +434,47 @@ describe("MCP endpoint", () => {
     expect(((await refreshed.json()) as { access_token: string }).access_token).toBeTruthy();
   });
 });
+
+describe("undo", () => {
+  test("DELETE …/klossar/last takes back the latest kloss; with nothing left it is a 409", async () => {
+    serve();
+    const code = await newSession({}, "0,0|2x2|red\n2,0|2x4|blue\n");
+    const s = `/api/sessions/${code}`;
+    const res = await req(`${s}/klossar/last`, { method: "DELETE" });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ undone: { color: "blue" }, klossar: 1 });
+    await req(`${s}/klossar/last`, { method: "DELETE" });
+    const empty = await req(`${s}/klossar/last`, { method: "DELETE" });
+    expect(empty.status).toBe(409);
+  });
+
+  test("with login on, you can only take back your own kloss", async () => {
+    serve({ password: "letmein" });
+    const ada = await token("ada@example.com");
+    const bob = await token("bob@example.com");
+    const code = await newSession({ authorization: `Bearer ${ada}` });
+    await post(`/api/sessions/${code}/klossar`, "0,0|2x2|red", { authorization: `Bearer ${ada}` });
+    const denied = await req(`/api/sessions/${code}/klossar/last`, {
+      method: "DELETE",
+      headers: { authorization: `Bearer ${bob}` },
+    });
+    expect(denied.status).toBe(409);
+    expect(((await denied.json()) as { error: string }).error).toContain("ada@example.com");
+    const ok = await req(`/api/sessions/${code}/klossar/last`, {
+      method: "DELETE",
+      headers: { authorization: `Bearer ${ada}` },
+    });
+    expect(ok.status).toBe(200);
+  });
+
+  test("viewers get an undo event with the kloss and the model that is left", async () => {
+    serve();
+    const code = await newSession({}, "0,0|2x2|red\n.\n");
+    const s = `/api/sessions/${code}`;
+    const events = await readEvents(await req(`${s}/events`), 2, () =>
+      req(`${s}/klossar/last`, { method: "DELETE" }),
+    );
+    expect(events[1]?.event).toBe("undo");
+    expect(events[1]?.data).toMatchObject({ kloss: { level: 1 }, klossar: [{ level: 0 }] });
+  });
+});

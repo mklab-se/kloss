@@ -40,7 +40,7 @@ describe("MCP protocol", () => {
     expect(String(r?.instructions)).toContain("create_session");
   });
 
-  test("tools/list offers the six tools, and none of them lists sessions", () => {
+  test("tools/list offers the seven tools, and none of them lists sessions", () => {
     const tools = (call(context(), "tools/list").result?.tools ?? []) as { name: string }[];
     expect(tools.map((t) => t.name).sort()).toEqual([
       "create_session",
@@ -49,6 +49,7 @@ describe("MCP protocol", () => {
       "get_model",
       "kloss_format",
       "replace_model",
+      "undo_kloss",
     ]);
   });
 
@@ -104,4 +105,17 @@ describe("MCP tools", () => {
   test("kloss_format explains the line format", () => {
     expect(tool(context(), "kloss_format").text).toContain("x,y|size|color");
   });
+});
+
+test("undo_kloss takes back the latest kloss, and says so when there is none", () => {
+  const ctx = context("ada@example.com");
+  const code = String(tool(ctx, "create_session").data.code);
+  tool(ctx, "drop_klossar", { code, lines: ["0,0|2x2|red", "2,0|2x4|blue"] });
+  const r = tool(ctx, "undo_kloss", { code });
+  expect(r.isError).toBe(false);
+  expect(r.data).toMatchObject({ undone: { color: "blue" }, klossar: 1 });
+  tool(ctx, "undo_kloss", { code });
+  const none = tool(ctx, "undo_kloss", { code });
+  expect(none.isError).toBe(true);
+  expect(none.text).toContain("nothing to undo");
 });

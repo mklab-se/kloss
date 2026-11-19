@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { FormatError } from "../../src/core/format.ts";
-import { LimitError, Model, type ModelEvent } from "../../src/server/model.ts";
+import { LimitError, Model, type ModelEvent, UndoError } from "../../src/server/model.ts";
 
 function thrown(fn: () => unknown): unknown {
   try {
@@ -102,4 +102,46 @@ test("a dot repeat is a new kloss with its own index (it copies only size, color
   m.dropLine(".", "bob@example.com");
   expect(m.klossar.map((k) => k.index)).toEqual([0, 1, 2]);
   expect(m.klossar.map((k) => k.by)).toEqual(["ada@example.com", undefined, "bob@example.com"]);
+});
+
+describe("undo", () => {
+  test("takes back the most recent kloss, then the one before, and notifies", () => {
+    const m = Model.from("0,0|2x2|red\n.\n");
+    const events: ModelEvent[] = [];
+    m.subscribe((e) => events.push(e));
+    const gone = m.undo();
+    expect(gone).toMatchObject({ index: 1, level: 1 });
+    expect(m.klossar).toHaveLength(1);
+    expect(events).toEqual([{ type: "undo", kloss: gone, klossar: m.klossar as never }]);
+    m.undo();
+    expect(m.klossar).toHaveLength(0);
+  });
+
+  test("the landing heights follow: a new drop lands where the undone kloss was", () => {
+    const m = Model.from("0,0|2x2|red\n.\n.\n");
+    m.undo();
+    expect(m.dropLine(".").level).toBe(2);
+    m.undo();
+    m.undo();
+    expect(m.dropLine("0,0|1x1|blue").level).toBe(1);
+  });
+
+  test("a dot after an undo repeats the kloss that is now last", () => {
+    const m = Model.from("0,0|2x2|red\n4,4|1x1|blue\n");
+    m.undo();
+    expect(m.dropLine(".")).toMatchObject({ x: 0, y: 0, size: "2x2", color: "red", level: 1 });
+  });
+
+  test("with an author, only that author can undo their kloss", () => {
+    const m = new Model();
+    m.dropLine("0,0|2x2|red", "ada@example.com");
+    expect(thrown(() => m.undo("bob@example.com"))).toBeInstanceOf(UndoError);
+    expect((thrown(() => m.undo("bob@example.com")) as Error).message).toContain("ada@example.com");
+    expect(m.klossar).toHaveLength(1);
+    expect(m.undo("ada@example.com")).toMatchObject({ by: "ada@example.com" });
+  });
+
+  test("nothing to undo is an UndoError", () => {
+    expect(thrown(() => new Model().undo())).toBeInstanceOf(UndoError);
+  });
 });

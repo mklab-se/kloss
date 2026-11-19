@@ -5,7 +5,7 @@
  * host has turned MCP on (see http.ts).
  */
 import { FormatError } from "../core/format.ts";
-import { LimitError } from "./model.ts";
+import { LimitError, UndoError } from "./model.ts";
 import type { SessionStore } from "./sessions.ts";
 
 const PROTOCOL_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
@@ -82,6 +82,20 @@ const TOOLS = [
     },
   },
   {
+    name: "undo_kloss",
+    title: "Take back the last kloss",
+    description:
+      "Takes back the most recent kloss in the session, for example one dropped in the wrong " +
+      "place. Call it again to take back the one before. With login on, only the person who " +
+      "dropped a kloss can take it back.",
+    inputSchema: {
+      type: "object",
+      properties: codeArg,
+      required: ["code"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "get_model",
     title: "Read a session's model",
     description: `The session's whole model as .kl text, how many klossar it has, its URL, and who has dropped klossar. ${UNTRUSTED}`,
@@ -140,7 +154,8 @@ const failure = (text: string): CallResult => ({
 });
 
 function errorText(e: unknown): string {
-  if (e instanceof FormatError || e instanceof LimitError) return e.message;
+  if (e instanceof FormatError || e instanceof LimitError || e instanceof UndoError)
+    return e.message;
   throw e;
 }
 
@@ -183,6 +198,15 @@ function callTool(name: string, args: Record<string, unknown>, ctx: McpContext):
           }
         }
         return json({ code: s.code, placed, klossar: s.model.klossar.length });
+      }
+      case "undo_kloss": {
+        const s = session();
+        const k = s.model.undo(ctx.email);
+        return json({
+          code: s.code,
+          undone: { x: k.x, y: k.y, size: k.size, color: k.color, level: k.level },
+          klossar: s.model.klossar.length,
+        });
       }
       case "get_model": {
         const s = session();

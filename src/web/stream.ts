@@ -9,6 +9,8 @@ export type Status = "live" | "reconnecting";
 export interface StreamHandlers {
   onModel(klossar: PlacedKloss[], mcp: boolean): void;
   onDrop(kloss: PlacedKloss): void;
+  /** A kloss was taken back; `klossar` is the model that is left. */
+  onUndo(kloss: PlacedKloss, klossar: PlacedKloss[]): void;
   onStatus(status: Status): void;
   onDeleted(): void;
 }
@@ -22,6 +24,13 @@ export function connect(code: string, h: StreamHandlers): () => void {
   });
   source.addEventListener("drop", (e) => {
     h.onDrop(JSON.parse((e as MessageEvent).data) as PlacedKloss);
+  });
+  source.addEventListener("undo", (e) => {
+    const data = JSON.parse((e as MessageEvent).data) as {
+      kloss: PlacedKloss;
+      klossar: PlacedKloss[];
+    };
+    h.onUndo(data.kloss, data.klossar);
   });
   source.addEventListener("deleted", () => {
     source.close();

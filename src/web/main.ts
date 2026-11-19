@@ -11,6 +11,7 @@ import { createCompass } from "./compass.ts";
 import { DropQueue } from "./drops.ts";
 import { guardedFrame } from "./frame.ts";
 import { createOverlay } from "./overlay.ts";
+import { Poofs } from "./poofs.ts";
 import { KlossScene } from "./scene.ts";
 import { connect } from "./stream.ts";
 
@@ -19,6 +20,7 @@ if (!canvas) throw new Error("missing #view canvas");
 
 const view = new KlossScene(canvas);
 const drops = new DropQueue(view);
+const poofs = new Poofs(view);
 const camera = new CadController(view);
 camera.attach(canvas);
 
@@ -88,6 +90,14 @@ function start(): void {
     onStatus(s) {
       overlay.setStatus(s);
     },
+    onUndo(kloss, klossar) {
+      // the model without it, at once; a ghost of it goes "poof" where it was
+      drops.clear();
+      camera.clearIncluded();
+      view.setModel(klossar);
+      poofs.add(kloss, performance.now());
+      if (kloss.by) overlay.activity(`${kloss.by} took back a ${kloss.color} ${kloss.size}`);
+    },
     onDeleted() {
       overlay.gone("This session was removed.");
     },
@@ -105,7 +115,9 @@ function step(now: number): void {
   }
   const dt = Math.min(100, now - last);
   last = now;
-  const dropping = drops.update(now);
+  const falling = drops.update(now);
+  const poofing = poofs.update(now);
+  const dropping = falling || poofing;
   const moving = camera.update(dt);
   if (dropping || moving || view.needsRender) {
     view.render();

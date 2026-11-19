@@ -9,12 +9,21 @@ import { type KlossInput, MAX_KLOSSAR, type PlacedKloss } from "../core/types.ts
 export type ModelEvent =
   | { type: "model"; klossar: PlacedKloss[] }
   | { type: "drop"; kloss: PlacedKloss }
+  | { type: "undo"; kloss: PlacedKloss; klossar: PlacedKloss[] }
   | { type: "deleted" };
 
 export class LimitError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "LimitError";
+  }
+}
+
+/** Nothing to undo, or the last kloss belongs to someone else. */
+export class UndoError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "UndoError";
   }
 }
 
@@ -94,6 +103,23 @@ export class Model {
     const k = parseLine(text, { last: this.placed.at(-1) });
     if (!k) throw new FormatError('expected a kloss line like "2,0|2x4|blue"');
     return this.drop(k, by);
+  }
+
+  /**
+   * Takes back the most recent kloss (always safe: nothing has landed on it yet). With an
+   * author, only the one who dropped it may take it back.
+   */
+  undo(by?: string): PlacedKloss {
+    const last = this.placed.at(-1);
+    if (!last) throw new UndoError("there is nothing to undo: the model is empty");
+    if (by && last.by && last.by !== by) {
+      throw new UndoError(`the last kloss was dropped by ${last.by}; only they can undo it`);
+    }
+    this.placed = this.placed.slice(0, -1);
+    this.heights = heightsOf(this.placed);
+    this.lastChange = this.now();
+    this.emit({ type: "undo", kloss: last, klossar: this.placed });
+    return last;
   }
 
   /** Replaces the whole model. Validates everything first; on error nothing changes. */

@@ -10,7 +10,7 @@ import viewer from "../web/index.html";
 import start from "../web/start.html";
 import { ACCESS_TTL, type Auth, REFRESH_TTL } from "./auth.ts";
 import { handleMcp, type RpcMessage } from "./mcp.ts";
-import { LimitError, type ModelEvent } from "./model.ts";
+import { LimitError, type ModelEvent, UndoError } from "./model.ts";
 import { adminPage, loginPage, withStatus } from "./pages.ts";
 import type { Session, SessionStore } from "./sessions.ts";
 
@@ -59,6 +59,7 @@ function errorResponse(e: unknown): Response {
     if (e.line !== undefined) body.line = e.line;
     return Response.json(body, { status: 400 });
   }
+  if (e instanceof UndoError) return Response.json({ error: e.message }, { status: 409 });
   if (e instanceof LimitError) {
     // a full model is the request's fault (413); a full server is temporary (503)
     const status = e.message.includes("sessions") ? 503 : 413;
@@ -489,6 +490,14 @@ export function startServer(opts: ServerOptions): Server<undefined> {
         return Response.json(s.model.drop(parseKlossJson(json), by), { status: 201 });
       }, true),
     },
+    "/api/sessions/:code/klossar/last": {
+      // take back the most recent kloss (with login on, only your own)
+      DELETE: api((req, email) => {
+        const s = session(req.params.code);
+        const undone = s.model.undo(email || undefined);
+        return Response.json({ code: s.code, undone, klossar: s.model.klossar.length });
+      }, true),
+    },
     "/api/sessions/:code/model": {
       GET: api((req) => {
         const s = session(req.params.code);
@@ -520,6 +529,7 @@ export function startServer(opts: ServerOptions): Server<undefined> {
           const leave = sessions.watch(s.code);
           const off = s.model.subscribe((e: ModelEvent) => {
             if (e.type === "drop") send("drop", e.kloss);
+            else if (e.type === "undo") send("undo", { kloss: e.kloss, klossar: e.klossar });
             else if (e.type === "model") send("model", model(e.klossar));
             else send("deleted", { code: s.code });
           });

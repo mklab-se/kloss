@@ -106,6 +106,7 @@ All under `/api/sessions/<code>`:
 | --- | --- |
 | `POST /api/sessions` | Starts a session, optionally from a `.kl` body. Returns `{ code, url }`. |
 | `POST …/klossar` | Drops one kloss. Body: a line (`2,0\|2x4\|blue`, or `5,1` and `.` to reuse the last kloss's size and color) or JSON (`{"size":"2x4","color":"blue","x":2,"y":0}`). Returns where it landed (`level`). |
+| `DELETE …/klossar/last` | Takes back the most recent kloss (it vanishes with a poof for everyone watching). Again takes back the one before. With login on, only your own; otherwise a `409` says whose it is. |
 | `GET …/model` | The model as JSON: `{ code, klossar: [{ index, size, color, x, y, level, by }] }`. |
 | `GET …/model.kl` | The model as `.kl` text: how you save it. |
 | `PUT …/model` | Replaces the model with a `.kl` body; nothing changes if any line is invalid. |
@@ -141,7 +142,7 @@ Failed logins are slowed down. `KLOSS_TOKEN_SECRET` keeps logins valid across re
 ## MCP
 
 kloss has an MCP endpoint at `/mcp` (Streamable HTTP) with tools to create a session, drop
-klossar, read and replace a model and delete a session, so an agent can build without working
+klossar, take back the last one, read and replace a model and delete a session, so an agent can build without working
 out the REST API. It is **off** until the host turns it on, and while it is off there is no
 trace of it: `/mcp` and the OAuth endpoints answer like any unknown address.
 

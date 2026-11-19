@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Undo:** `DELETE /api/sessions/<code>/klossar/last` (and the MCP tool `undo_kloss`) takes back the
+  most recent kloss; with login on, only your own. In the viewer it vanishes with a poof.
+
+### Added
+
 - **Sessions:** many models at once, in memory, each with a short readable code (`otter-maple-42`).
   `POST /api/sessions` (optionally with a `.kl` body), and per session `klossar`, `model`,
   `model.kl` (download), `events` and `DELETE`. A start page to join by code or start a session;
