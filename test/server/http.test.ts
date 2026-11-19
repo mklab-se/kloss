@@ -492,3 +492,36 @@ describe("optimize", () => {
     expect(await (await req(`${s}/model.kl`)).text()).toBe("  0,  0 | 4x1 | red\n");
   });
 });
+
+describe("render", () => {
+  test("GET …/render.png returns a PNG; the view and size can be chosen", async () => {
+    serve();
+    const code = await newSession({}, "0,0|2x4|red\n");
+    const res = await req(`/api/sessions/${code}/render.png?view=top&size=200`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("image/png");
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    expect([...bytes.slice(1, 4)]).toEqual([80, 78, 71]);
+    expect((await req(`/api/sessions/${code}/render.png?view=sideways`)).status).toBe(400);
+    expect((await req(`/api/sessions/${code}/render.png?size=big`)).status).toBe(400);
+  });
+
+  test("with login on, a picture needs login too", async () => {
+    serve({ password: "letmein" });
+    const t = await token();
+    const code = await newSession({ authorization: `Bearer ${t}` });
+    expect((await req(`/api/sessions/${code}/render.png`)).status).toBe(401);
+  });
+});
+
+test("viewers see the optimized model at once, with a note saying what changed", async () => {
+  serve();
+  const code = await newSession({}, "0,0|1x1|red\n1,0\n2,0\n3,0\n");
+  const s = `/api/sessions/${code}`;
+  const events = await readEvents(await req(`${s}/events`), 2, () => post(`${s}/optimize`, ""));
+  expect(events[1]?.event).toBe("model");
+  expect(events[1]?.data).toMatchObject({
+    klossar: [{ size: "4x1" }],
+    note: "Optimized: 4 → 1 klossar",
+  });
+});

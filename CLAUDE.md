@@ -9,7 +9,7 @@ floor, by hand or through an MCP server. It will be used to demonstrate the powe
 potential risks of MCP servers.
 
 Vocabulary (our own, not Lego's): a brick is a **kloss** (plural klossar); sizes 1x1, 1x2, 2x1,
-2x2, 2x4 and 4x2 are counted in **pluppar**; a **plupp** is a plus-shaped connector bump on top, one third of a
+1x4, 4x1, 2x2, 2x4 and 4x2 are counted in **pluppar**; a **plupp** is a plus-shaped connector bump on top, one third of a
 brick's height, fitting a plus-shaped **socket** underneath. One plupp in a socket is a strong
 enough joint. The **floor** is endless and covered in pluppar. A kloss not held by the floor or
 another kloss falls, tumbles and is removed (this comes with removal; with drop-only building every
@@ -54,12 +54,14 @@ single-file release binaries.
 - `src/commands/`: one module per command (`serve.ts`, `completion.ts`). Add new commands here.
 - `src/core/` (shared by server and browser; no DOM or server APIs): `types.ts` (data model and
   dimensions), `format.ts` (the `.kl` line format `x,y|size|color` with carry-over and `.` repeats; parse, compact aligned writing; sizes, palette), `landing.ts` (height map:
-  a kloss lands on the highest thing under its footprint).
+  a kloss lands on the highest thing under its footprint), `optimize.ts` (merges klossar where
+  every landing stays the same; each merge is checked by replaying the model).
 - `src/server/`: `model.ts` (one session's model in memory; synchronous, so drops never interleave;
   emits `model`/`drop`/`deleted`), `sessions.ts` (the session store, idle sweep, limits),
   `session-code.ts`, `auth.ts` (password check, HMAC-signed tokens, login slow-down, OAuth
   helpers: client ids and codes are signed, not stored), `mcp.ts` (hand-written JSON-RPC tools,
-  like lykta), `pages.ts` (login and admin pages), `http.ts` (all routes; `mcpOnly` routes 404
+  like lykta), `pages.ts` (login and admin pages), `render.ts` (PNG
+  pictures without a browser: unit cells, painter's order, own PNG encoder), `http.ts` (all routes; `mcpOnly` routes 404
   while MCP is off).
 - `src/web/`: the viewer (`index.html`, Three.js) and the start page (`start.html`), bundled by
   Bun from HTML imports and embedded in the compiled binary.

@@ -69,8 +69,9 @@ async function begin(): Promise<void> {
 
 function start(): void {
   connect(code, {
-    onModel(klossar, mcp) {
+    onModel(klossar, mcp, note) {
       overlay.setMcp(mcp);
+      if (note) overlay.activity(note);
       drops.clear();
       camera.clearIncluded();
       view.setModel(klossar);

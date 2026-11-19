@@ -12,6 +12,7 @@ import { ACCESS_TTL, type Auth, REFRESH_TTL } from "./auth.ts";
 import { handleMcp, type RpcMessage } from "./mcp.ts";
 import { LimitError, type ModelEvent, UndoError } from "./model.ts";
 import { adminPage, loginPage, withStatus } from "./pages.ts";
+import { renderModel, VIEWS, type View } from "./render.ts";
 import type { Session, SessionStore } from "./sessions.ts";
 
 export interface ServerOptions {
@@ -498,6 +499,25 @@ export function startServer(opts: ServerOptions): Server<undefined> {
         return Response.json({ code: s.code, undone, klossar: s.model.klossar.length });
       }, true),
     },
+    "/api/sessions/:code/render.png": {
+      // a picture of the model, rendered on the server (so an agent can "see" it)
+      GET: api((req) => {
+        const s = session(req.params.code);
+        const q = new URL(req.url).searchParams;
+        const view = (q.get("view") ?? "iso") as View;
+        if (!VIEWS.includes(view)) {
+          throw new FormatError(`unknown view "${view}" (use ${VIEWS.join(", ")})`);
+        }
+        const sizeText = q.get("size");
+        const size = sizeText === null ? undefined : Number(sizeText);
+        if (size !== undefined && !Number.isInteger(size)) {
+          throw new FormatError("size must be a whole number of pixels (64 to 2048)");
+        }
+        return new Response(renderModel(s.model.klossar, { view, size }), {
+          headers: { "content-type": "image/png", "cache-control": "no-store" },
+        });
+      }),
+    },
     "/api/sessions/:code/optimize": {
       // merge klossar into bigger ones where the model stays exactly the same
       POST: api((req) => {
@@ -538,7 +558,7 @@ export function startServer(opts: ServerOptions): Server<undefined> {
           const off = s.model.subscribe((e: ModelEvent) => {
             if (e.type === "drop") send("drop", e.kloss);
             else if (e.type === "undo") send("undo", { kloss: e.kloss, klossar: e.klossar });
-            else if (e.type === "model") send("model", model(e.klossar));
+            else if (e.type === "model") send("model", { ...model(e.klossar), note: e.note });
             else send("deleted", { code: s.code });
           });
           return () => {

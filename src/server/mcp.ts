@@ -6,6 +6,7 @@
  */
 import { FormatError } from "../core/format.ts";
 import { LimitError, UndoError } from "./model.ts";
+import { renderModel, VIEWS, type View } from "./render.ts";
 import type { SessionStore } from "./sessions.ts";
 
 const PROTOCOL_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
@@ -96,6 +97,28 @@ const TOOLS = [
     },
   },
   {
+    name: "render_model",
+    title: "See a picture of a model",
+    description:
+      "Renders the session's model as a PNG picture, so you can see what it looks like: from " +
+      "an angle (iso, the default), or straight from the top, the front (+y) or the side (+x). " +
+      "Good for checking the overall shape; for exact positions read get_model.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        ...codeArg,
+        view: {
+          type: "string",
+          enum: [...VIEWS],
+          description: "iso (default), top, front or side.",
+        },
+        size: { type: "integer", description: "Longest side in pixels, 64 to 2048 (default 512)." },
+      },
+      required: ["code"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "optimize_model",
     title: "Optimize a model",
     description:
@@ -159,7 +182,7 @@ export interface McpContext {
 }
 
 interface CallResult {
-  content: { type: "text"; text: string }[];
+  content: ({ type: "text"; text: string } | { type: "image"; data: string; mimeType: string })[];
   isError?: boolean;
 }
 
@@ -225,6 +248,23 @@ function callTool(name: string, args: Record<string, unknown>, ctx: McpContext):
           undone: { x: k.x, y: k.y, size: k.size, color: k.color, level: k.level },
           klossar: s.model.klossar.length,
         });
+      }
+      case "render_model": {
+        const s = session();
+        const view = (typeof args.view === "string" ? args.view : "iso") as View;
+        if (!VIEWS.includes(view))
+          return failure(`Unknown view "${view}"; use ${VIEWS.join(", ")}.`);
+        const size = typeof args.size === "number" ? args.size : 512;
+        const png = renderModel(s.model.klossar, { view, size });
+        return {
+          content: [
+            { type: "image", data: Buffer.from(png).toString("base64"), mimeType: "image/png" },
+            {
+              type: "text",
+              text: `The ${view} view of session ${s.code}, ${s.model.klossar.length} klossar.`,
+            },
+          ],
+        };
       }
       case "optimize_model": {
         const s = session();

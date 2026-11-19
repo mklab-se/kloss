@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Two new sizes: **1x4** and **4x1**.
+- **Optimize:** `POST /api/sessions/<code>/optimize` (and the MCP tool `optimize_model`) merges
+  klossar of the same color that lie side by side on the same level into bigger ones, where the
+  model looks and stands exactly the same. Viewers see the result at once. The castle goes from
+  2,227 to 1,974 klossar.
+- **Pictures:** `GET /api/sessions/<code>/render.png` (and the MCP tool `render_model`, which hands
+  the agent the image) renders the model on the server, from an angle or the top, front or side.
+
 - The viewer's first instructions (and its help card, and `kloss serve`'s output) show both steps
   when login is on: get a token, with your own e-mail address filled in, then drop a kloss.
 

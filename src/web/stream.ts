@@ -7,7 +7,8 @@ import type { PlacedKloss } from "../core/types.ts";
 export type Status = "live" | "reconnecting";
 
 export interface StreamHandlers {
-  onModel(klossar: PlacedKloss[], mcp: boolean): void;
+  /** A whole model (on connect, after a replace or an optimize); `note` says why, if anything. */
+  onModel(klossar: PlacedKloss[], mcp: boolean, note?: string): void;
   onDrop(kloss: PlacedKloss): void;
   /** A kloss was taken back; `klossar` is the model that is left. */
   onUndo(kloss: PlacedKloss, klossar: PlacedKloss[]): void;
@@ -19,8 +20,12 @@ export function connect(code: string, h: StreamHandlers): () => void {
   const source = new EventSource(`/api/sessions/${encodeURIComponent(code)}/events`);
   source.addEventListener("model", (e) => {
     h.onStatus("live");
-    const data = JSON.parse((e as MessageEvent).data) as { klossar: PlacedKloss[]; mcp?: boolean };
-    h.onModel(data.klossar, Boolean(data.mcp));
+    const data = JSON.parse((e as MessageEvent).data) as {
+      klossar: PlacedKloss[];
+      mcp?: boolean;
+      note?: string;
+    };
+    h.onModel(data.klossar, Boolean(data.mcp), data.note);
   });
   source.addEventListener("drop", (e) => {
     h.onDrop(JSON.parse((e as MessageEvent).data) as PlacedKloss);

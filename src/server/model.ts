@@ -8,7 +8,7 @@ import { optimize } from "../core/optimize.ts";
 import { type KlossInput, MAX_KLOSSAR, type PlacedKloss } from "../core/types.ts";
 
 export type ModelEvent =
-  | { type: "model"; klossar: PlacedKloss[] }
+  | { type: "model"; klossar: PlacedKloss[]; note?: string }
   | { type: "drop"; kloss: PlacedKloss }
   | { type: "undo"; kloss: PlacedKloss; klossar: PlacedKloss[] }
   | { type: "deleted" };
@@ -135,7 +135,8 @@ export class Model {
       this.placed = placeAll(r.klossar);
       this.heights = heightsOf(this.placed);
       this.lastChange = this.now();
-      this.emit({ type: "model", klossar: this.placed });
+      const note = `Optimized: ${r.before} → ${r.after} klossar`;
+      this.emit({ type: "model", klossar: this.placed, note });
     }
     return { before: r.before, after: r.after, merges: r.merges, applied };
   }

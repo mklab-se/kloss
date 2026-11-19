@@ -77,8 +77,8 @@ it. A color alone keeps the size (`5,1|blue`). Spaces are allowed around `,` and
 that write models (kloss itself, and `scripts/castle.ts`) right-align the coordinates so the
 columns line up. The first kloss in a file has to give both size and color.
 
-- **Size** `<w>x<d>`: `w` pluppar along x, `d` along y. Sizes: `1x1`, `1x2`, `2x1`, `2x2`,
-  `2x4`, `4x2` (a `4x2` is a `2x4` turned).
+- **Size** `<w>x<d>`: `w` pluppar along x, `d` along y. Sizes: `1x1`, `1x2`, `2x1`, `1x4`,
+  `4x1`, `2x2`, `2x4`, `4x2` (a `4x2` is a `2x4` turned).
 - **Color**: white, gray, black, red, orange, yellow, lime, green, blue, azure, purple, pink, brown,
   tan.
 - **Position** `x,y`: the kloss's corner with the smallest coordinates, whole numbers from -10000
@@ -107,6 +107,8 @@ All under `/api/sessions/<code>`:
 | `POST /api/sessions` | Starts a session, optionally from a `.kl` body. Returns `{ code, url }`. |
 | `POST …/klossar` | Drops one kloss. Body: a line (`2,0\|2x4\|blue`, or `5,1` and `.` to reuse the last kloss's size and color) or JSON (`{"size":"2x4","color":"blue","x":2,"y":0}`). Returns where it landed (`level`). |
 | `DELETE …/klossar/last` | Takes back the most recent kloss (it vanishes with a poof for everyone watching). Again takes back the one before. With login on, only your own; otherwise a `409` says whose it is. |
+| `POST …/optimize` | Merges klossar of the same color that lie side by side on the same level into bigger ones (two 2x2 into a 2x4, four 1x1 in a row into a 4x1, two 1x4 into a 2x4), where the model looks and stands exactly the same. Viewers see the slimmer model at once. `?preview=true` only reports how many it would save. |
+| `GET …/render.png` | A picture of the model, rendered on the server: `?view=iso` (default), `top`, `front` or `side`, and `size` (longest side, 64 to 2048 pixels). |
 | `GET …/model` | The model as JSON: `{ code, klossar: [{ index, size, color, x, y, level, by }] }`. |
 | `GET …/model.kl` | The model as `.kl` text: how you save it. |
 | `PUT …/model` | Replaces the model with a `.kl` body; nothing changes if any line is invalid. |
@@ -142,7 +144,8 @@ Failed logins are slowed down. `KLOSS_TOKEN_SECRET` keeps logins valid across re
 ## MCP
 
 kloss has an MCP endpoint at `/mcp` (Streamable HTTP) with tools to create a session, drop
-klossar, take back the last one, read and replace a model and delete a session, so an agent can build without working
+klossar, take back the last one, see a picture of the model, optimize it, read and replace it
+and delete a session, so an agent can build without working
 out the REST API. It is **off** until the host turns it on, and while it is off there is no
 trace of it: `/mcp` and the OAuth endpoints answer like any unknown address.
 

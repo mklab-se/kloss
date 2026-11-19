@@ -40,7 +40,7 @@ describe("MCP protocol", () => {
     expect(String(r?.instructions)).toContain("create_session");
   });
 
-  test("tools/list offers the eight tools, and none of them lists sessions", () => {
+  test("tools/list offers the nine tools, and none of them lists sessions", () => {
     const tools = (call(context(), "tools/list").result?.tools ?? []) as { name: string }[];
     expect(tools.map((t) => t.name).sort()).toEqual([
       "create_session",
@@ -49,6 +49,7 @@ describe("MCP protocol", () => {
       "get_model",
       "kloss_format",
       "optimize_model",
+      "render_model",
       "replace_model",
       "undo_kloss",
     ]);
@@ -133,4 +134,16 @@ test("optimize_model merges klossar, or only reports with preview", () => {
   });
   expect(tool(ctx, "optimize_model", { code }).data).toMatchObject({ after: 1, applied: true });
   expect(tool(ctx, "get_model", { code }).data.klossar).toBe(1);
+});
+
+test("render_model returns the picture as an image the agent can see", () => {
+  const ctx = context();
+  const code = String(tool(ctx, "create_session", { model: "0,0|2x4|red\n" }).data.code);
+  const r = call(ctx, "tools/call", { name: "render_model", arguments: { code, view: "iso" } })
+    .result as { content: { type: string; mimeType?: string; data?: string; text?: string }[] };
+  const image = r.content.find((c) => c.type === "image");
+  expect(image?.mimeType).toBe("image/png");
+  const bytes = Buffer.from(image?.data ?? "", "base64");
+  expect([...bytes.subarray(1, 4)]).toEqual([80, 78, 71]);
+  expect(r.content.some((c) => c.type === "text")).toBe(true);
 });
