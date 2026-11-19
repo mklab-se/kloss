@@ -10,6 +10,7 @@ import { Argument, Command } from "commander";
 import { printBannerWithVersion } from "./banner.ts";
 import { dim, setColorEnabled, yellow } from "./color.ts";
 import { generateCompletion, SHELLS, type Shell } from "./commands/completion.ts";
+import { runMcpStdio } from "./commands/mcp.ts";
 import { runServe } from "./commands/serve.ts";
 import { DESCRIPTION, NO_UPDATE_CHECK_ENV, PACKAGE_NAME, TOOL, VERSION } from "./meta.ts";
 import { checkForUpdate } from "./update.ts";
@@ -97,6 +98,36 @@ export function buildProgram(): Command {
         });
       },
     );
+
+  program
+    .command("mcp")
+    .description("run kloss as an MCP server for an agent: on stdio, with its own local 3D view")
+    .option("--http", "serve MCP over HTTP at /mcp instead (like serve --mcp)")
+    .option(
+      "-p, --port <n>",
+      "port for the web server (default: a free one; 4321 with --http)",
+      (v) => Number.parseInt(v, 10),
+    )
+    .option("--host <host>", "address to listen on", "127.0.0.1")
+    .addHelpText(
+      "after",
+      "\nAdd it to an agent, for example: claude mcp add kloss -- kloss mcp\nOn stdio, stdout belongs to MCP; logs go to stderr. Sessions last as long as the process.",
+    )
+    .action(async (opts: { http?: boolean; port?: number; host: string }) => {
+      if (opts.http) {
+        await runServe({
+          port: opts.port ?? 4321,
+          host: opts.host,
+          open: false,
+          mcp: true,
+          sessionIdle: "2h",
+          maxSessions: 100,
+        });
+        return;
+      }
+      await runMcpStdio({ port: opts.port ?? 0, host: opts.host });
+      process.exit(0);
+    });
 
   program
     .command("version")

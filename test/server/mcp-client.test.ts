@@ -1,6 +1,7 @@
-/** The official MCP client talks to kloss's endpoint, with and without login. */
+/** The official MCP client talks to kloss: over HTTP, with and without login, and over stdio. */
 import { afterEach, expect, test } from "bun:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { Server } from "bun";
 import { Auth } from "../../src/server/auth.ts";
@@ -59,5 +60,23 @@ test("with login, the SDK client builds a model with a bearer token, as the drop
   const model = await client.callTool({ name: "get_model", arguments: { code } });
   const data = JSON.parse((model.content as { text: string }[])[0]?.text ?? "{}");
   expect(data.droppedBy).toEqual(["agent@example.com"]);
+  await client.close();
+});
+
+test("over stdio (kloss mcp), the SDK client builds a model it can link to", async () => {
+  const client = new Client({ name: "test", version: "1.0.0" });
+  await client.connect(
+    new StdioClientTransport({
+      command: "bun",
+      args: ["src/cli.ts", "mcp"],
+      env: { ...(process.env as Record<string, string>), KLOSS_NO_UPDATE_CHECK: "1" },
+      stderr: "ignore",
+    }),
+  );
+  const code = await build(client);
+  const model = await client.callTool({ name: "get_model", arguments: { code } });
+  const data = JSON.parse((model.content as { text: string }[])[0]?.text ?? "{}");
+  expect(data.klossar).toBe(3);
+  expect((await fetch(data.url)).status).toBe(200);
   await client.close();
 });

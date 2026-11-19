@@ -10,7 +10,7 @@ import viewer from "../web/index.html";
 import start from "../web/start.html";
 import { ACCESS_TTL, type Auth, REFRESH_TTL } from "./auth.ts";
 import { FlockFullError } from "./flock.ts";
-import { handleMcp, type RpcMessage } from "./mcp.ts";
+import { handleMcp, type RpcMessage, toolCallLine } from "./mcp.ts";
 import { LimitError, type ModelEvent, UndoError } from "./model.ts";
 import { docsPage, openApi } from "./openapi.ts";
 import { adminPage, loginPage, withStatus } from "./pages.ts";
@@ -758,17 +758,8 @@ export function startServer(opts: ServerOptions): Server<undefined> {
           const answer = handleMcp(m, ctx);
           // the host sees what agents do: who called which tool, for which session, and
           // whether it was refused (and why)
-          if (m?.method === "tools/call") {
-            const args = (m.params?.arguments ?? {}) as Record<string, unknown>;
-            const code = typeof args.code === "string" ? ` ${args.code}` : "";
-            const result = answer?.result as
-              | { isError?: boolean; content?: { text?: string }[] }
-              | undefined;
-            const refused = result?.isError
-              ? ` (refused: ${(result.content?.[0]?.text ?? "").slice(0, 120)})`
-              : "";
-            log(`mcp: ${email || "-"} ${String(m.params?.name ?? "?")}${code}${refused}`);
-          }
+          const line = toolCallLine(m, answer, email);
+          if (line) log(line);
           return answer;
         })
         .filter((a) => a !== null);

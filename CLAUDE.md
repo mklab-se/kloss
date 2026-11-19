@@ -51,7 +51,9 @@ single-file release binaries.
 - `src/cli.ts`: entry point (`#!/usr/bin/env bun`). `buildProgram()` defines the commander CLI;
   `main()` parses, applies global flags, and awaits the background update check for at most 1.5 s.
   The no-command action prints the banner and how to start (`kloss serve`). `--help`/`-h` and `--version`/`-V` come from commander.
-- `src/commands/`: one module per command (`serve.ts`, `completion.ts`). Add new commands here.
+- `src/commands/`: one module per command (`serve.ts`, `mcp.ts`, `completion.ts`). Add new commands here.
+  `kloss mcp` is MCP on stdio (stdout is the protocol, logs go to stderr) plus its own web server
+  on a free port for the viewer links; `kloss mcp --http` is `serve --mcp`.
 - `src/core/` (shared by server and browser; no DOM or server APIs): `types.ts` (data model and
   dimensions), `format.ts` (the `.kl` line format `x,y|size|color` with carry-over and `.` repeats; parse, compact aligned writing; sizes, palette), `landing.ts` (height map:
   a kloss lands on the highest thing under its footprint), `optimize.ts` (merges klossar where

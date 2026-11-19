@@ -206,6 +206,24 @@ It serves http://127.0.0.1:4321 with login off, so the examples above work witho
 Set `KLOSS_PASSWORD=...` to turn login on, `--mcp` to turn the MCP endpoint on, and
 `--host 0.0.0.0` to let others on your network in. `kloss serve --help` lists the rest.
 
+### As a local MCP server
+
+You can also let your agent start kloss itself, with no server to run first:
+
+```sh
+claude mcp add kloss -- kloss mcp
+```
+
+`kloss mcp` speaks MCP on stdio and starts its own small web server on a free port, so when you
+ask for the live view you get a link like `http://127.0.0.1:52311/s/otter-maple-42`, and the
+REST API works at the same address. There is no login: the klossar are dropped as your user
+name. The models live as long as the agent's kloss does, so save the ones you want to keep
+("Save the model to house.kl").
+
+To serve MCP over HTTP instead, run `kloss mcp --http` (http://127.0.0.1:4321/mcp, the same as
+`kloss serve --mcp`) and add it with `claude mcp add --transport http kloss
+http://127.0.0.1:4321/mcp`.
+
 ## More
 
 - [CHANGELOG.md](CHANGELOG.md): what changed in each version.

@@ -169,3 +169,120 @@ test("with login on, kloss serve prints the token step too", async () => {
   expect(out).toContain("/api/token");
   expect(out).toContain("Authorization: Bearer $TOKEN");
 });
+
+describe("mcp", () => {
+  const procs: ReturnType<typeof Bun.spawn>[] = [];
+  afterEach(() => {
+    for (const p of procs.splice(0)) p.kill();
+  });
+
+  const clean = () =>
+    Object.fromEntries(
+      Object.entries(env).filter(([k]) => !k.startsWith("KLOSS_") || k === "KLOSS_NO_UPDATE_CHECK"),
+    );
+
+  /** `kloss mcp` on stdio: send one JSON-RPC message per line, read one answer per line. */
+  function stdio() {
+    const proc = Bun.spawn(["bun", "src/cli.ts", "mcp"], {
+      env: clean(),
+      stdin: "pipe",
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    procs.push(proc);
+    const reader = (proc.stdout as ReadableStream<Uint8Array>).getReader();
+    const decoder = new TextDecoder();
+    let buffered = "";
+    const next = async (): Promise<Record<string, unknown>> => {
+      while (!buffered.includes("\n")) {
+        const { value, done } = await reader.read();
+        if (done) throw new Error(`stdout closed; so far: ${buffered}`);
+        buffered += decoder.decode(value);
+      }
+      const at = buffered.indexOf("\n");
+      const line = buffered.slice(0, at);
+      buffered = buffered.slice(at + 1);
+      return JSON.parse(line);
+    };
+    let id = 0;
+    const send = (text: string) => {
+      proc.stdin.write(`${text}\n`);
+      proc.stdin.flush();
+    };
+    const call = async (method: string, params: Record<string, unknown> = {}) => {
+      send(JSON.stringify({ jsonrpc: "2.0", id: ++id, method, params }));
+      return next();
+    };
+    return { proc, send, next, call };
+  }
+
+  const text = (answer: Record<string, unknown>) =>
+    JSON.parse(
+      ((answer.result as { content: { text: string }[] }).content[0] as { text: string }).text,
+    );
+
+  test("on stdio it builds, and links to its own local 3D view", async () => {
+    const { proc, send, call } = stdio();
+    const init = await call("initialize", { protocolVersion: "2025-06-18" });
+    expect((init.result as { serverInfo: { name: string } }).serverInfo.name).toBe("kloss");
+    send(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }));
+    const tools = await call("tools/list");
+    expect((tools.result as { tools: unknown[] }).tools.length).toBeGreaterThan(5);
+
+    const made = text(await call("tools/call", { name: "create_session", arguments: {} }));
+    expect(made.url).toMatch(/^http:\/\/(127\.0\.0\.1|localhost):\d+\/s\/[a-z]+-[a-z]+-\d+$/);
+    await call("tools/call", {
+      name: "drop_klossar",
+      arguments: { code: made.code, lines: ["2,0|2x4|blue"] },
+    });
+    // the viewer link works, and the REST API sees the same model
+    expect((await fetch(made.url)).status).toBe(200);
+    const base = new URL(made.url).origin;
+    expect(await (await fetch(`${base}/api/sessions/${made.code}/model.kl`)).text()).toBe(
+      "  2,  0 | 2x4 | blue\n",
+    );
+
+    // logs go to stderr, never stdout; closing stdin ends it
+    proc.stdin.end();
+    expect(await proc.exited).toBe(0);
+    const err = await new Response(proc.stderr as ReadableStream).text();
+    expect(err).toContain(base);
+    expect(err).toContain("create_session");
+  });
+
+  test("a line that is not JSON gets a parse error, and it keeps going", async () => {
+    const { send, next, call } = stdio();
+    send("not json");
+    const bad = await next();
+    expect(bad).toMatchObject({ id: null, error: { code: -32700 } });
+    expect((await call("ping")).result).toEqual({});
+  });
+
+  test("--http serves MCP over HTTP, on from the start", async () => {
+    const proc = Bun.spawn(["bun", "src/cli.ts", "mcp", "--http", "--port", "0"], {
+      env: clean(),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    procs.push(proc);
+    const reader = (proc.stdout as ReadableStream<Uint8Array>).getReader();
+    let out = "";
+    while (!/MCP at \S+/.test(out)) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      out += new TextDecoder().decode(value);
+    }
+    const endpoint = /MCP at (http:\/\/\S+)/.exec(out)?.[1];
+    expect(endpoint).toMatch(/\/mcp$/);
+    const res = await fetch(endpoint as string, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+    });
+    expect(res.status).toBe(200);
+    expect(JSON.stringify(await res.json())).toContain("create_session");
+  });
+});

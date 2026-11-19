@@ -90,6 +90,7 @@ export async function runServe(
       `login ${auth.enabled ? "on" : "off"}, admin ${auth.enabled && !auth.adminEnabled ? "off" : "on"}, MCP ${opts.mcp ? "on" : "off"}, sessions expire after ${opts.sessionIdle} idle`,
     ),
   );
+  if (opts.mcp) console.log(`MCP at ${url}/mcp`);
   if (auth.enabled) {
     const bearer = ' -H "Authorization: Bearer $TOKEN"';
     console.log(dim("Log in, start a session and drop a kloss:"));

@@ -2,7 +2,7 @@
  * kloss as an MCP server (Model Context Protocol): an AI agent builds through these tools
  * instead of working out the REST API itself. Streamable HTTP, stateless, plain JSON answers
  * (no sessions, no streams), which every MCP client supports. The endpoint exists only while the
- * host has turned MCP on (see http.ts).
+ * host has turned MCP on (see http.ts). `kloss mcp` speaks the same messages on stdio.
  */
 import { FormatError } from "../core/format.ts";
 import { LimitError, UndoError } from "./model.ts";
@@ -364,4 +364,23 @@ export function handleMcp(msg: RpcMessage, ctx: McpContext): Record<string, unkn
     default:
       return fail(-32601, `Method not found: ${msg.method}`);
   }
+}
+
+/**
+ * The log line for a tool call (who called which tool, for which session, and whether it was
+ * refused and why), or null when `msg` is not a tool call.
+ */
+export function toolCallLine(
+  msg: RpcMessage,
+  answer: Record<string, unknown> | null,
+  who?: string,
+): string | null {
+  if (msg?.method !== "tools/call") return null;
+  const args = (msg.params?.arguments ?? {}) as Record<string, unknown>;
+  const code = typeof args.code === "string" ? ` ${args.code}` : "";
+  const result = answer?.result as { isError?: boolean; content?: { text?: string }[] } | undefined;
+  const refused = result?.isError
+    ? ` (refused: ${(result.content?.[0]?.text ?? "").slice(0, 120)})`
+    : "";
+  return `mcp: ${who || "-"} ${String(msg.params?.name ?? "?")}${code}${refused}`;
 }

@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`kloss mcp`:** kloss as a local MCP server that your agent starts itself
+  (`claude mcp add kloss -- kloss mcp`). It speaks MCP on stdio and starts its own web server on
+  a free port, so the links to the live 3D view work and the REST API is right there too. No
+  login; klossar are dropped as your user name. `kloss mcp --http` serves MCP over HTTP instead,
+  turned on from the start. `kloss serve --mcp` now also prints where the MCP endpoint is.
 - **Chickens:** `POST /api/sessions/<code>/chickens` lets chickens loose in a model. They flutter
   down from the sky, then live their own lives: they walk around, flutter up one kloss, hop down
   from any height and explore the model, and everyone watching sees the same chickens. A kloss

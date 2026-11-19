@@ -208,6 +208,20 @@ The risks, all visible in this class:
   kloss. (A good live experiment: put such a comment in a model, open it through the agent, and
   see whether it obeys.)
 
+- **Local is a different risk, not a smaller one.** kloss also runs as a local MCP server
+  (`claude mcp add kloss -- kloss mcp`): the agent starts it as a process on the participant's
+  own machine. No login, no runtime switch, no one else's log; but it runs with all of the
+  user's rights. Here what you trust is the package you installed and every update to it, which
+  is why `npx some-mcp-server` deserves the same care as any other code you run.
+
+  | | Remote (HTTP) | Local (stdio) |
+  | --- | --- | --- |
+  | Where it runs | Someone else's server | Your machine, as you |
+  | What you trust | The server's owner | The package you installed (and its updates) |
+  | What it can reach | Only what it's sent | Your files, network and environment |
+  | How it logs in | OAuth | Not at all: it already is you |
+  | Can it change under you? | Yes, at any time | When you update it |
+
 Ways to protect yourself, to end on: connect only to servers you trust, review what an agent is
 about to do (permission prompts exist for a reason), keep local tools narrow when a remote
 server is connected, and prefer servers whose tools cannot change silently.
