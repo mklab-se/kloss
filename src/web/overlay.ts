@@ -1,16 +1,29 @@
 /**
- * The heads-up display: the model's file name and kloss count, the connection dot, the Auto-fit
- * switch, a hint while the model is empty, and the help card (toggled with `?`).
+ * The heads-up display: the session code and kloss count, the connection dot, the Auto-fit
+ * switch, who just dropped what, a hint while the model is empty, the help card (toggled with
+ * `?`), and a message when the session is gone.
  */
 import type { Status } from "./stream.ts";
 
+export interface About {
+  version: string;
+  auth: boolean;
+  email: string | null;
+}
+
 export interface Overlay {
-  setFile(name: string): void;
   setCount(n: number): void;
   setStatus(s: Status): void;
   setAutoFit(on: boolean): void;
   onAutoFitClick(fn: () => void): void;
   toggleHelp(force?: boolean): void;
+  setAbout(a: About): void;
+  /** Whether the MCP endpoint is on (it is only mentioned while it is). */
+  setMcp(on: boolean): void;
+  /** A short line about what just happened, like "ada@example.com dropped a blue 2x4". */
+  activity(text: string): void;
+  /** The session does not exist (any more). */
+  gone(message: string): void;
 }
 
 const CONTROLS: [string, string][] = [
@@ -39,15 +52,28 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return e;
 }
 
-export function createOverlay(root: HTMLElement): Overlay {
-  const curl = `curl -X POST ${location.origin}/api/klossar -d '2,0|2x4|blue'`;
+export function createOverlay(root: HTMLElement, code: string): Overlay {
+  const sessionUrl = `${location.origin}/s/${code}`;
+  const curlFor = (auth: boolean) =>
+    `curl -X POST ${location.origin}/api/sessions/${code}/klossar${auth ? ' -H "Authorization: Bearer $TOKEN"' : ""} -d '2,0|2x4|blue'`;
 
   const info = el("div", "hud hud-info");
   const dot = el("span", "dot");
   dot.title = "Connecting";
-  const file = el("span", "file", "kloss");
+  const name = el("button", "session-code", code);
+  name.type = "button";
+  name.title = "Copy the link to this session";
   const count = el("span", "count", "");
-  info.append(dot, file, count);
+  info.append(dot, name, count);
+  name.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(sessionUrl);
+      name.textContent = "link copied";
+      setTimeout(() => {
+        name.textContent = code;
+      }, 1400);
+    } catch {}
+  });
 
   const fit = el("button", "hud hud-fit");
   fit.type = "button";
@@ -59,25 +85,39 @@ export function createOverlay(root: HTMLElement): Overlay {
   helpButton.title = "Controls";
 
   const empty = el("div", "empty");
-  empty.append(el("div", "empty-title", "Drop your first kloss"), el("code", "empty-code", curl));
+  const emptyCode = el("code", "empty-code", curlFor(false));
+  empty.append(el("div", "empty-title", "Drop your first kloss"), emptyCode);
+
+  const feed = el("div", "activity");
 
   const help = el("div", "help");
   help.hidden = true;
   help.append(el("div", "help-title", "Controls"));
   const table = el("dl", "help-table");
   for (const [key, what] of CONTROLS) table.append(el("dt", "", key), el("dd", "", what));
-  help.append(table, el("div", "help-title", "Drop a kloss"), el("code", "help-code", curl));
+  const helpCode = el("code", "help-code", curlFor(false));
+  const about = el("div", "help-about", "");
+  const mcpLine = el("div", "help-about", "");
+  mcpLine.hidden = true;
+  help.append(
+    table,
+    el("div", "help-title", "Drop a kloss"),
+    helpCode,
+    el("div", "help-title", "This session"),
+    el("div", "help-about", sessionUrl),
+    about,
+    mcpLine,
+  );
 
-  root.append(info, fit, helpButton, empty, help);
+  const goneCard = el("div", "gone");
+  goneCard.hidden = true;
+
+  root.append(info, fit, helpButton, empty, feed, help, goneCard);
 
   let autoFitHandler = () => {};
   fit.addEventListener("click", () => autoFitHandler());
 
   const overlay: Overlay = {
-    setFile(name) {
-      file.textContent = name;
-      document.title = `${name} · kloss`;
-    },
     setCount(n) {
       count.textContent = n === 1 ? "1 kloss" : `${n} klossar`;
       empty.hidden = n > 0;
@@ -98,6 +138,31 @@ export function createOverlay(root: HTMLElement): Overlay {
     },
     toggleHelp(force) {
       help.hidden = force === undefined ? !help.hidden : !force;
+    },
+    setAbout(a) {
+      about.textContent = `kloss ${a.version}${a.email ? ` · logged in as ${a.email}` : ""}`;
+      emptyCode.textContent = curlFor(a.auth);
+      helpCode.textContent = curlFor(a.auth);
+    },
+    setMcp(on) {
+      mcpLine.hidden = !on;
+      mcpLine.textContent = on ? `MCP endpoint: ${location.origin}/mcp` : "";
+    },
+    activity(text) {
+      const line = el("div", "activity-line", text);
+      feed.append(line);
+      while (feed.children.length > 4) feed.firstElementChild?.remove();
+      setTimeout(() => line.classList.add("fade"), 3500);
+      setTimeout(() => line.remove(), 4500);
+    },
+    gone(message) {
+      goneCard.replaceChildren(
+        el("div", "gone-title", message),
+        Object.assign(el("a", "gone-link", "Go to the start page"), { href: "/" }),
+      );
+      goneCard.hidden = false;
+      empty.hidden = true;
+      dot.classList.remove("live");
     },
   };
   helpButton.addEventListener("click", () => overlay.toggleHelp());

@@ -42,7 +42,7 @@ test.if(enabled)(
     let html = "";
     for (let i = 0; i < 50 && !html; i++) {
       try {
-        html = await (await fetch(base)).text();
+        html = await (await fetch(`${base}/s/otter-maple-42`)).text();
       } catch {
         await Bun.sleep(100);
       }

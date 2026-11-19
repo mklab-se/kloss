@@ -94,3 +94,12 @@ describe("Model", () => {
     expect(m.lastChange).toBe(5000);
   });
 });
+
+test("a dot repeat is a new kloss with its own index (it copies only size, color and place)", () => {
+  const m = new Model();
+  m.dropLine("0,0|2x4|red", "ada@example.com");
+  m.dropLine(".");
+  m.dropLine(".", "bob@example.com");
+  expect(m.klossar.map((k) => k.index)).toEqual([0, 1, 2]);
+  expect(m.klossar.map((k) => k.by)).toEqual(["ada@example.com", undefined, "bob@example.com"]);
+});

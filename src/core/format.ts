@@ -89,7 +89,7 @@ export function parseLine(text: string, carry: Carry = {}): KlossInput | null {
   if (body === ".") {
     if (!last)
       throw new FormatError('nothing to repeat yet: "." repeats the kloss dropped before it');
-    return { ...last };
+    return { size: last.size, color: last.color, x: last.x, y: last.y };
   }
   const old = OLD_LINE.exec(body);
   if (old) {

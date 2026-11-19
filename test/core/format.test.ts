@@ -206,3 +206,8 @@ describe("palette and sizes", () => {
     expect(SIZES["4x2"]).toEqual({ w: 4, d: 2 });
   });
 });
+
+test("a dot repeats only size, color and position, not anything else the last kloss carried", () => {
+  const last = { size: "2x2", color: "red", x: 1, y: 2, index: 7, level: 3, by: "a@b.se" } as const;
+  expect(parseLine(".", { last })).toEqual({ size: "2x2", color: "red", x: 1, y: 2 });
+});

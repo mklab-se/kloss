@@ -75,7 +75,13 @@ export class Model {
 
   drop(k: KlossInput, by?: string): PlacedKloss {
     if (this.placed.length >= MAX_KLOSSAR) throw tooMany();
-    const kloss: PlacedKloss = { index: this.placed.length, ...k, level: this.heights.place(k) };
+    // only what a drop says; never carry an index, level or author over from elsewhere
+    const input: KlossInput = { size: k.size, color: k.color, x: k.x, y: k.y };
+    const kloss: PlacedKloss = {
+      index: this.placed.length,
+      ...input,
+      level: this.heights.place(input),
+    };
     if (by) kloss.by = by;
     this.placed = [...this.placed, kloss];
     this.lastChange = this.now();
