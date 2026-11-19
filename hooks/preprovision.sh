@@ -13,7 +13,8 @@ words() {
   pick() { i=$(( $(od -An -N2 -tu2 /dev/urandom) % n + 1 )); eval "printf %s \"\${$i}\""; }
   printf '%s-%s-%s-%s' "$(pick)" "$(pick)" "$(pick)" "$(( $(od -An -N1 -tu1 /dev/urandom) % 90 + 10 ))"
 }
-have() { [ -n "$(azd env get-value "$1" 2>/dev/null | grep -v '^ERROR' || true)" ]; }
+# azd exits non-zero for a key it does not have (and prints the error on stdout, so never test the text)
+have() { azd env get-value "$1" >/dev/null 2>&1; }
 
 if ! have KLOSS_PASSWORD; then
   azd env set KLOSS_PASSWORD "$(words)" >/dev/null
