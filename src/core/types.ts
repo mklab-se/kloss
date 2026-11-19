@@ -3,7 +3,7 @@
  */
 
 /** `<w>x<d>`: w pluppar along x, d along y. The size carries the orientation. */
-export type Size = "1x1" | "1x2" | "2x1" | "2x2" | "2x4" | "4x2";
+export type Size = "1x1" | "1x2" | "2x1" | "1x4" | "4x1" | "2x2" | "2x4" | "4x2";
 
 export type ColorName =
   | "white"

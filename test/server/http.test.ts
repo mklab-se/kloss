@@ -478,3 +478,17 @@ describe("undo", () => {
     expect(events[1]?.data).toMatchObject({ kloss: { level: 1 }, klossar: [{ level: 0 }] });
   });
 });
+
+describe("optimize", () => {
+  test("POST …/optimize merges klossar; ?preview=true only reports", async () => {
+    serve();
+    const code = await newSession({}, "0,0|1x1|red\n1,0\n2,0\n3,0\n");
+    const s = `/api/sessions/${code}`;
+    const preview = await post(`${s}/optimize?preview=true`, "");
+    expect(await preview.json()).toMatchObject({ before: 4, after: 1, applied: false });
+    const done = await post(`${s}/optimize`, "");
+    expect(done.status).toBe(200);
+    expect(await done.json()).toMatchObject({ before: 4, after: 1, applied: true });
+    expect(await (await req(`${s}/model.kl`)).text()).toBe("  0,  0 | 4x1 | red\n");
+  });
+});

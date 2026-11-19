@@ -9,6 +9,8 @@ export const SIZES: Record<Size, { w: number; d: number }> = {
   "1x1": { w: 1, d: 1 },
   "1x2": { w: 1, d: 2 },
   "2x1": { w: 2, d: 1 },
+  "1x4": { w: 1, d: 4 },
+  "4x1": { w: 4, d: 1 },
   "2x2": { w: 2, d: 2 },
   "2x4": { w: 2, d: 4 },
   "4x2": { w: 4, d: 2 },

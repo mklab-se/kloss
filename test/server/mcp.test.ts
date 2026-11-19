@@ -40,7 +40,7 @@ describe("MCP protocol", () => {
     expect(String(r?.instructions)).toContain("create_session");
   });
 
-  test("tools/list offers the seven tools, and none of them lists sessions", () => {
+  test("tools/list offers the eight tools, and none of them lists sessions", () => {
     const tools = (call(context(), "tools/list").result?.tools ?? []) as { name: string }[];
     expect(tools.map((t) => t.name).sort()).toEqual([
       "create_session",
@@ -48,6 +48,7 @@ describe("MCP protocol", () => {
       "drop_klossar",
       "get_model",
       "kloss_format",
+      "optimize_model",
       "replace_model",
       "undo_kloss",
     ]);
@@ -118,4 +119,18 @@ test("undo_kloss takes back the latest kloss, and says so when there is none", (
   const none = tool(ctx, "undo_kloss", { code });
   expect(none.isError).toBe(true);
   expect(none.text).toContain("nothing to undo");
+});
+
+test("optimize_model merges klossar, or only reports with preview", () => {
+  const ctx = context();
+  const code = String(
+    tool(ctx, "create_session", { model: "0,0|2x2|red\n2,0|2x2|red\n" }).data.code,
+  );
+  expect(tool(ctx, "optimize_model", { code, preview: true }).data).toMatchObject({
+    before: 2,
+    after: 1,
+    applied: false,
+  });
+  expect(tool(ctx, "optimize_model", { code }).data).toMatchObject({ after: 1, applied: true });
+  expect(tool(ctx, "get_model", { code }).data.klossar).toBe(1);
 });

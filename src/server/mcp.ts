@@ -21,7 +21,7 @@ plupp (stud) of overlap is enough to hold. Height is never written; it comes fro
 
 A line is  x,y|size|color
 - x,y: the corner of the kloss with the smallest coordinates, whole numbers -10000..10000.
-- size: <w>x<d>, w pluppar along x and d along y: 1x1, 1x2, 2x1, 2x2, 2x4, 4x2 (a 4x2 is a turned 2x4).
+- size: <w>x<d>, w pluppar along x and d along y: 1x1, 1x2, 2x1, 1x4, 4x1, 2x2, 2x4, 4x2 (a 4x2 is a turned 2x4).
 - color: white, gray, black, red, orange, yellow, lime, green, blue, azure, purple, pink, brown, tan.
 - Leave out the size or the color and the last one used is used again ("5,1", "5,1|2x2",
   "5,1|red"); a line with just "." repeats the drop before it. The first kloss in a session
@@ -91,6 +91,24 @@ const TOOLS = [
     inputSchema: {
       type: "object",
       properties: codeArg,
+      required: ["code"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "optimize_model",
+    title: "Optimize a model",
+    description:
+      "Merges klossar of the same color that lie side by side on the same level into bigger " +
+      "klossar (two 2x2 into a 2x4, four 1x1 in a row into a 4x1, and so on), where the model " +
+      "looks and stands exactly the same. Fewer klossar, same model. With preview: true it " +
+      "only reports how many klossar it would save.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        ...codeArg,
+        preview: { type: "boolean", description: "Only report; change nothing." },
+      },
       required: ["code"],
       additionalProperties: false,
     },
@@ -207,6 +225,10 @@ function callTool(name: string, args: Record<string, unknown>, ctx: McpContext):
           undone: { x: k.x, y: k.y, size: k.size, color: k.color, level: k.level },
           klossar: s.model.klossar.length,
         });
+      }
+      case "optimize_model": {
+        const s = session();
+        return json({ code: s.code, ...s.model.optimize(args.preview === true) });
       }
       case "get_model": {
         const s = session();

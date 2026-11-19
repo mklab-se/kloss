@@ -145,3 +145,35 @@ describe("undo", () => {
     expect(thrown(() => new Model().undo())).toBeInstanceOf(UndoError);
   });
 });
+
+describe("optimize", () => {
+  test("merges klossar in place, keeps who dropped them, and tells viewers", () => {
+    const m = new Model();
+    m.dropLine("0,0|2x2|red", "ada@example.com");
+    m.dropLine("2,0|2x2|red", "ada@example.com");
+    const events: ModelEvent[] = [];
+    m.subscribe((e) => events.push(e));
+    expect(m.optimize()).toEqual({ before: 2, after: 1, merges: 1, applied: true });
+    expect(m.klossar).toEqual([
+      { index: 0, size: "4x2", color: "red", x: 0, y: 0, level: 0, by: "ada@example.com" },
+    ]);
+    expect(events.map((e) => e.type)).toEqual(["model"]);
+  });
+
+  test("a preview reports what it would do and changes nothing", () => {
+    const m = Model.from("0,0|2x2|red\n2,0|2x2|red\n");
+    const events: ModelEvent[] = [];
+    m.subscribe((e) => events.push(e));
+    expect(m.optimize(true)).toEqual({ before: 2, after: 1, merges: 1, applied: false });
+    expect(m.klossar).toHaveLength(2);
+    expect(events).toHaveLength(0);
+  });
+
+  test("with nothing to merge, nothing changes and nobody is told", () => {
+    const m = Model.from("0,0|2x2|red\n2,0|2x2|blue\n");
+    const events: ModelEvent[] = [];
+    m.subscribe((e) => events.push(e));
+    expect(m.optimize()).toEqual({ before: 2, after: 2, merges: 0, applied: false });
+    expect(events).toHaveLength(0);
+  });
+});

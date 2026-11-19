@@ -201,9 +201,20 @@ describe("palette and sizes", () => {
     for (const hex of Object.values(PALETTE)) expect(hex).toMatch(/^#[0-9a-f]{6}$/);
   });
 
-  test("six sizes, w along x and d along y", () => {
-    expect(Object.keys(SIZES).sort()).toEqual(["1x1", "1x2", "2x1", "2x2", "2x4", "4x2"]);
+  test("eight sizes, w along x and d along y", () => {
+    expect(Object.keys(SIZES).sort()).toEqual([
+      "1x1",
+      "1x2",
+      "1x4",
+      "2x1",
+      "2x2",
+      "2x4",
+      "4x1",
+      "4x2",
+    ]);
     expect(SIZES["4x2"]).toEqual({ w: 4, d: 2 });
+    expect(SIZES["1x4"]).toEqual({ w: 1, d: 4 });
+    expect(SIZES["4x1"]).toEqual({ w: 4, d: 1 });
   });
 });
 

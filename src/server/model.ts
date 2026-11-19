@@ -4,6 +4,7 @@
  */
 import { FormatError, formatModel, parseLine, parseModel } from "../core/format.ts";
 import { HeightMap, placeAll } from "../core/landing.ts";
+import { optimize } from "../core/optimize.ts";
 import { type KlossInput, MAX_KLOSSAR, type PlacedKloss } from "../core/types.ts";
 
 export type ModelEvent =
@@ -120,6 +121,23 @@ export class Model {
     this.lastChange = this.now();
     this.emit({ type: "undo", kloss: last, klossar: this.placed });
     return last;
+  }
+
+  /**
+   * Merges klossar into bigger ones where the model looks and stands exactly the same (see
+   * core/optimize.ts). With `preview`, only reports what it would do.
+   */
+  optimize(preview = false): { before: number; after: number; merges: number; applied: boolean } {
+    const inputs = this.placed.map(({ index: _i, level: _l, ...k }) => k);
+    const r = optimize(inputs);
+    const applied = !preview && r.merges > 0;
+    if (applied) {
+      this.placed = placeAll(r.klossar);
+      this.heights = heightsOf(this.placed);
+      this.lastChange = this.now();
+      this.emit({ type: "model", klossar: this.placed });
+    }
+    return { before: r.before, after: r.after, merges: r.merges, applied };
   }
 
   /** Replaces the whole model. Validates everything first; on error nothing changes. */

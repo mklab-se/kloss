@@ -498,6 +498,14 @@ export function startServer(opts: ServerOptions): Server<undefined> {
         return Response.json({ code: s.code, undone, klossar: s.model.klossar.length });
       }, true),
     },
+    "/api/sessions/:code/optimize": {
+      // merge klossar into bigger ones where the model stays exactly the same
+      POST: api((req) => {
+        const s = session(req.params.code);
+        const preview = new URL(req.url).searchParams.get("preview") === "true";
+        return Response.json({ code: s.code, ...s.model.optimize(preview) });
+      }, true),
+    },
     "/api/sessions/:code/model": {
       GET: api((req) => {
         const s = session(req.params.code);
