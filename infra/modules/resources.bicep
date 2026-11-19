@@ -2,7 +2,8 @@
 param environmentName string
 param location string
 param tags object
-param klossExists bool
+@description('The image to run: the current one, or a placeholder before the first deploy.')
+param image string
 @secure()
 param klossPassword string
 @secure()
@@ -14,8 +15,6 @@ param sessionIdle string
 var token = toLower(uniqueString(subscription().id, resourceGroup().id, environmentName))
 var appName = 'ca-kloss-${environmentName}'
 var acrPullRoleId = '7f951dda-4ed3-4680-a7ca-43fe172d538d'
-// azd swaps this placeholder for the kloss image on deploy; it listens on 8080 via the env below
-var placeholderImage = 'mcr.microsoft.com/dotnet/samples:aspnetapp'
 
 resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: 'log-kloss-${token}'
@@ -68,11 +67,6 @@ resource environment 'Microsoft.App/managedEnvironments@2024-03-01' = {
   }
 }
 
-// keep the image `azd deploy` shipped when provisioning again
-resource existing 'Microsoft.App/containerApps@2024-03-01' existing = if (klossExists) {
-  name: appName
-}
-
 var secrets = concat(
   empty(klossPassword) ? [] : [{ name: 'kloss-password', value: klossPassword }],
   empty(klossAdminPassword) ? [] : [{ name: 'kloss-admin-password', value: klossAdminPassword }],
@@ -116,7 +110,7 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
       containers: [
         {
           name: 'kloss'
-          image: klossExists ? existing!.properties.template.containers[0].image : placeholderImage
+          image: image
           resources: {
             cpu: json('0.5')
             memory: '1Gi'

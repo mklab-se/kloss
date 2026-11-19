@@ -28,11 +28,21 @@ param klossTokenSecret string = ''
 param sessionIdle string = '2h'
 
 var tags = { 'azd-env-name': environmentName, app: 'kloss' }
+var appName = 'ca-kloss-${environmentName}'
+// azd swaps this placeholder for the kloss image on deploy; it listens on 8080 (see resources)
+var placeholderImage = 'mcr.microsoft.com/dotnet/samples:aspnetapp'
 
 resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: 'rg-kloss-${environmentName}'
   location: location
   tags: tags
+}
+
+// keep the image `azd deploy` shipped when provisioning again
+module current 'modules/fetch-image.bicep' = if (klossExists) {
+  name: 'kloss-current-image'
+  scope: rg
+  params: { name: appName }
 }
 
 module resources 'modules/resources.bicep' = {
@@ -42,7 +52,7 @@ module resources 'modules/resources.bicep' = {
     environmentName: environmentName
     location: location
     tags: tags
-    klossExists: klossExists
+    image: klossExists ? current!.outputs.image : placeholderImage
     klossPassword: klossPassword
     klossAdminPassword: klossAdminPassword
     klossTokenSecret: klossTokenSecret
