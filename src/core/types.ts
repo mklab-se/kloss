@@ -33,6 +33,8 @@ export interface KlossInput {
 export interface PlacedKloss extends KlossInput {
   index: number;
   level: number;
+  /** Who dropped it (an e-mail address), when login is on. Never written to .kl. */
+  by?: string;
 }
 
 /** Units: 1 = the spacing between pluppar. */

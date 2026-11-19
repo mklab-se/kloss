@@ -3,7 +3,7 @@
  * Slow, so it only runs with KLOSS_COMPILED_TEST=1 (CI's build job runs it).
  */
 import { afterAll, expect, test } from "bun:test";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -33,7 +33,7 @@ test.if(enabled)(
     expect(build.exitCode).toBe(0);
     const port = 18_000 + Math.floor(Math.random() * 1000);
     // run from an empty directory so nothing can be read from the source tree
-    proc = Bun.spawn([out, "serve", "m.kl", "--port", String(port)], {
+    proc = Bun.spawn([out, "serve", "--port", String(port)], {
       cwd: dir,
       env: { ...process.env, KLOSS_NO_UPDATE_CHECK: "1" },
       stdout: "pipe",
@@ -54,11 +54,13 @@ test.if(enabled)(
       const res = await fetch(new URL(a ?? "", base));
       expect(res.status).toBe(200);
     }
-    const drop = await fetch(`${base}/api/klossar`, { method: "POST", body: "0,0|2x2|red" });
-    expect(drop.status).toBe(201);
-    const model = (await (await fetch(`${base}/api/model`)).json()) as { klossar: unknown[] };
+    const made = await fetch(`${base}/api/sessions`, { method: "POST", body: "0,0|2x2|red\n" });
+    expect(made.status).toBe(201);
+    const { code } = (await made.json()) as { code: string };
+    const model = (await (await fetch(`${base}/api/sessions/${code}/model`)).json()) as {
+      klossar: unknown[];
+    };
     expect(model.klossar).toHaveLength(1);
-    expect(await readFile(join(dir, "m.kl"), "utf8")).toBe("  0,  0 | 2x2 | red\n");
   },
   120_000,
 );

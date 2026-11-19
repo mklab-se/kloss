@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>kloss</title>
+    <link rel="stylesheet" href="./start.css" />
+  </head>
+  <body>
+    <main>
+      <h1>kloss</h1>
+      <p class="lead">Build models from klossar, together, and watch them fall into place.</p>
+      <form id="join">
+        <label for="code">Session code</label>
+        <div class="join">
+          <input id="code" name="code" placeholder="otter-maple-42" autocomplete="off" spellcheck="false" required />
+          <button type="submit">Go</button>
+        </div>
+        <div id="error" class="error" hidden></div>
+      </form>
+      <div class="or"><span>or</span></div>
+      <button id="new" class="new" type="button">New session</button>
+      <p id="who" class="who"></p>
+    </main>
+    <script type="module" src="./start.ts"></script>
+  </body>
+</html>

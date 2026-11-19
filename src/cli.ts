@@ -43,23 +43,60 @@ export function buildProgram(): Command {
     // No command: the banner and how to start. `--help` still works.
     .action(() => {
       printBannerWithVersion();
-      console.log("Start building with: kloss serve model.kl");
+      console.log("Start building with: kloss serve");
     });
 
   program
     .command("serve")
-    .description("serve the live 3D view and the REST API for a kloss model")
-    .argument("[file]", "the model file (created if missing)", "model.kl")
-    .option("-p, --port <n>", "port to listen on", (v) => Number.parseInt(v, 10), 4321)
+    .description("serve the start page, the live 3D viewer and the REST API for kloss sessions")
+    .option(
+      "-p, --port <n>",
+      "port to listen on (KLOSS_PORT)",
+      (v) => Number.parseInt(v, 10),
+      Number(process.env.KLOSS_PORT ?? 4321),
+    )
     .option(
       "--host <host>",
-      "address to listen on (0.0.0.0 exposes it to the network)",
-      "127.0.0.1",
+      "address to listen on; 0.0.0.0 exposes it to the network (KLOSS_HOST)",
+      process.env.KLOSS_HOST ?? "127.0.0.1",
     )
-    .option("--open", "open the view in the browser")
-    .action(async (file: string, opts: { port: number; host: string; open?: boolean }) => {
-      await runServe({ file, port: opts.port, host: opts.host, open: opts.open ?? false });
-    });
+    .option("--mcp", "start with the MCP endpoint turned on (KLOSS_MCP=1)")
+    .option(
+      "--session-idle <time>",
+      "remove sessions idle this long, like 30m or 2h (KLOSS_SESSION_IDLE)",
+      process.env.KLOSS_SESSION_IDLE ?? "2h",
+    )
+    .option(
+      "--max-sessions <n>",
+      "how many sessions at most (KLOSS_MAX_SESSIONS)",
+      (v) => Number.parseInt(v, 10),
+      Number(process.env.KLOSS_MAX_SESSIONS ?? 100),
+    )
+    .option("--open", "open the start page in the browser")
+    .addHelpText(
+      "after",
+      "\nLogin is on when KLOSS_PASSWORD (or KLOSS_PASSWORD_FILE) is set: any e-mail address plus that\npassword. KLOSS_ADMIN_PASSWORD enables /admin, where the MCP endpoint is turned on and off.\nKLOSS_TOKEN_SECRET keeps logins valid across restarts.",
+    )
+    .action(
+      async (opts: {
+        port: number;
+        host: string;
+        mcp?: boolean;
+        sessionIdle: string;
+        maxSessions: number;
+        open?: boolean;
+      }) => {
+        const mcpEnv = (process.env.KLOSS_MCP ?? "").toLowerCase();
+        await runServe({
+          port: opts.port,
+          host: opts.host,
+          open: opts.open ?? false,
+          mcp: Boolean(opts.mcp) || mcpEnv === "1" || mcpEnv === "true",
+          sessionIdle: opts.sessionIdle,
+          maxSessions: opts.maxSessions,
+        });
+      },
+    );
 
   program
     .command("version")
